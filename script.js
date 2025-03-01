@@ -1,5 +1,9 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.6";
+const DASHBOARD_VERSION = "1.0.7";
+
+// Cache para armazenar as respostas da API
+const API_CACHE = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos em milissegundos
 
 // Configuração dos endpoints disponíveis
 const ENDPOINTS_ONS = {
@@ -70,6 +74,15 @@ async function fetchONSData(endpoint) {
     try {
         console.log('----------------------------------------');
         console.log(`🌐 ETAPA 1: Iniciando requisição para ${endpoint}`);
+        
+        // Verificar cache
+        const now = Date.now();
+        const cachedData = API_CACHE.get(endpoint);
+        if (cachedData && (now - cachedData.timestamp) < CACHE_DURATION) {
+            console.log('✅ Usando dados do cache');
+            return cachedData.data;
+        }
+        
         const fullUrl = `${CORS_PROXY}${API_BASE_URL}/${endpoint}`;
         console.log(`URL: ${fullUrl}`);
         
@@ -79,7 +92,13 @@ async function fetchONSData(endpoint) {
             }
         });
         
-        console.log('✅ ETAPA 2: Dados brutos da API:');
+        // Armazenar no cache
+        API_CACHE.set(endpoint, {
+            timestamp: now,
+            data: response.data
+        });
+        
+        console.log('✅ ETAPA 2: Dados recebidos da API:');
         console.log('----------------------------------------');
         console.log('ESTRUTURA COMPLETA DO PRIMEIRO ITEM:');
         console.log(JSON.stringify(response.data[0], null, 2));
@@ -103,7 +122,17 @@ async function fetchONSData(endpoint) {
         return response.data;
     } catch (error) {
         console.error('❌ ERRO na requisição:', error);
-        alert('Erro ao carregar dados. Verifique o console para mais detalhes.');
+        
+        // Se for erro 429 (Too Many Requests), tentar usar cache mesmo expirado
+        if (error.response && error.response.status === 429) {
+            const cachedData = API_CACHE.get(endpoint);
+            if (cachedData) {
+                console.log('⚠️ Usando dados do cache expirado devido ao limite de requisições');
+                return cachedData.data;
+            }
+        }
+        
+        alert('Erro ao carregar dados. Por favor, visite https://cors-anywhere.herokuapp.com/corsdemo e solicite acesso temporário.');
         return null;
     }
 }
