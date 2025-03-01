@@ -20,11 +20,14 @@ header {
 }
 
 .version-info {
-    font-size: 0.8rem;
-    opacity: 0.8;
+    font-size: 1rem;
     margin-top: 0.5rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: white;
     font-family: monospace;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
 }
 
 main {

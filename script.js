@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.5";
+const DASHBOARD_VERSION = "1.0.6";
 
 // Configuração dos endpoints disponíveis
 const ENDPOINTS_ONS = {
@@ -332,9 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const versionDiv = document.createElement('div');
     versionDiv.className = 'version-info';
     versionDiv.textContent = `Versão ${DASHBOARD_VERSION}`;
-    versionDiv.style.fontSize = '0.8rem';
-    versionDiv.style.opacity = '0.8';
-    versionDiv.style.marginTop = '0.5rem';
     header.appendChild(versionDiv);
     
     createEndpointSelectors();
