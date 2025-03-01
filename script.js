@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.8";
+const DASHBOARD_VERSION = "1.0.9";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
@@ -105,13 +105,29 @@ async function fetchONSData(endpoint) {
         console.log('----------------------------------------');
         
         if (!response.data) {
-            console.error('❌ ERRO: Dados não estão no formato esperado');
-            alert(`Erro ao carregar dados para ${endpoint}. Formato inválido.`);
+            console.error('❌ ERRO: Dados não disponíveis no momento');
+            alert(`Não há dados disponíveis para ${endpoint} no momento. Tente novamente mais tarde.`);
             return null;
         }
         
         // Verificar se é um array ou objeto
-        const dados = Array.isArray(response.data) ? response.data : [response.data];
+        let dados;
+        if (Array.isArray(response.data)) {
+            dados = response.data;
+        } else if (typeof response.data === 'object') {
+            dados = [response.data];
+        } else {
+            console.error('❌ ERRO: Formato de dados inesperado');
+            console.log('Tipo de dados recebido:', typeof response.data);
+            alert(`Erro ao carregar dados para ${endpoint}. Formato inesperado.`);
+            return null;
+        }
+        
+        if (!dados.length) {
+            console.error('❌ ERRO: Array de dados vazio');
+            alert(`Não há dados disponíveis para ${endpoint} no momento. Tente novamente mais tarde.`);
+            return null;
+        }
         
         console.log('ESTRUTURA COMPLETA DO PRIMEIRO ITEM:');
         console.log(JSON.stringify(dados[0], null, 2));
@@ -126,6 +142,7 @@ async function fetchONSData(endpoint) {
         console.log('Total de registros:', dados.length);
         if (dados[0]) {
             console.log('Campos disponíveis:', Object.keys(dados[0]));
+            console.log('Valores do primeiro item:', dados[0]);
         }
         
         return dados;
@@ -139,9 +156,13 @@ async function fetchONSData(endpoint) {
                 console.log('⚠️ Usando dados do cache expirado devido ao limite de requisições');
                 return cachedData.data;
             }
+            alert('Limite de requisições atingido. Por favor, visite https://cors-anywhere.herokuapp.com/corsdemo e solicite acesso temporário.');
+        } else if (error.response && error.response.status === 404) {
+            alert(`Endpoint ${endpoint} não está disponível no momento. Tente novamente mais tarde.`);
+        } else {
+            alert(`Erro ao carregar dados para ${endpoint}. ${error.message}`);
         }
         
-        alert('Erro ao carregar dados. Por favor, visite https://cors-anywhere.herokuapp.com/corsdemo e solicite acesso temporário.');
         return null;
     }
 }
@@ -165,12 +186,26 @@ function processData(data) {
     console.log('Exemplo do primeiro item:', data[0]);
     
     // Determinar campos baseado no primeiro item
-    let campoValor = 'geracao';
-    let campoData = 'instante';
+    let campoValor = null;
+    let campoData = null;
     
     if (data[0]) {
-        if ('valor' in data[0]) campoValor = 'valor';
-        if ('data' in data[0]) campoData = 'data';
+        // Tentar encontrar campos de valor
+        ['geracao', 'valor', 'volumeUtil', 'energiaArmazenada', 'carga'].forEach(campo => {
+            if (campo in data[0]) campoValor = campo;
+        });
+        
+        // Tentar encontrar campos de data
+        ['instante', 'data', 'dataHora'].forEach(campo => {
+            if (campo in data[0]) campoData = campo;
+        });
+    }
+    
+    if (!campoValor || !campoData) {
+        console.error('❌ ERRO: Não foi possível identificar os campos necessários');
+        console.log('Campos disponíveis:', Object.keys(data[0]));
+        alert('Erro ao processar dados: estrutura não reconhecida');
+        return { labels: [], values: [] };
     }
     
     console.log('Campos identificados:', { campoValor, campoData });
