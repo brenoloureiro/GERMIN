@@ -1,3 +1,6 @@
+// Versão atual do dashboard
+const DASHBOARD_VERSION = "1.0.5";
+
 // Configuração dos endpoints disponíveis
 const ENDPOINTS_ONS = {
     "Geração": {
@@ -324,5 +327,15 @@ async function handleEndpointSelection(endpoint, name, isSelected) {
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
+    // Adicionar versão no topo da página
+    const header = document.querySelector('header');
+    const versionDiv = document.createElement('div');
+    versionDiv.className = 'version-info';
+    versionDiv.textContent = `Versão ${DASHBOARD_VERSION}`;
+    versionDiv.style.fontSize = '0.8rem';
+    versionDiv.style.opacity = '0.8';
+    versionDiv.style.marginTop = '0.5rem';
+    header.appendChild(versionDiv);
+    
     createEndpointSelectors();
 }); 
