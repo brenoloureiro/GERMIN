@@ -106,26 +106,37 @@ function processData(data) {
         return { labels: [], values: [] };
     }
     
-    // Ordenar dados por data
-    data.sort((a, b) => new Date(a.Data) - new Date(b.Data));
-    
     // Vamos analisar a estrutura dos dados
     console.log('Exemplo do primeiro item:', data[0]);
     console.log('Propriedades disponíveis:', Object.keys(data[0]));
     
+    // Filtrar dados válidos e ordenar
+    const dadosValidos = data
+        .filter(item => item && item.Data && item.Valor)
+        .map(item => ({
+            ...item,
+            timestamp: new Date(item.Data).getTime()
+        }))
+        .sort((a, b) => a.timestamp - b.timestamp);
+
+    console.log('Primeiro item após filtro:', dadosValidos[0]);
+    
     const processed = {
-        labels: data.map(item => {
-            const date = new Date(item.Data);
-            // Formatar apenas hora e minuto
+        labels: dadosValidos.map(item => {
+            // A data vem no formato "/Date(1709337600000)/"
+            const timestamp = parseInt(item.Data.match(/\d+/)[0]);
+            const date = new Date(timestamp);
             const timeStr = date.toLocaleTimeString('pt-BR', { 
                 hour: '2-digit', 
                 minute: '2-digit'
             });
             console.log('Data original:', item.Data);
+            console.log('Timestamp extraído:', timestamp);
+            console.log('Data convertida:', date);
             console.log('Hora formatada:', timeStr);
             return timeStr;
         }),
-        values: data.map(item => {
+        values: dadosValidos.map(item => {
             const valor = parseFloat(item.Valor);
             console.log('Valor original:', item.Valor);
             console.log('Valor convertido:', valor);
