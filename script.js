@@ -105,6 +105,11 @@ async function fetchONSData(endpoint) {
     }
 }
 
+// Função para formatar número com ponto
+function formatNumber(value) {
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 // Função para processar os dados recebidos da API
 function processData(data) {
     console.log('----------------------------------------');
@@ -141,6 +146,11 @@ function processData(data) {
         const timestamp = parseInt(match[1]);
         const date = new Date(timestamp);
         const valor = parseFloat(item.Valor);
+        
+        if (isNaN(valor)) {
+            console.error('Valor inválido:', item.Valor);
+            return null;
+        }
         
         return {
             timestamp,
@@ -212,7 +222,9 @@ function createOrUpdateChart(endpoint, name, data) {
                     backgroundColor: 'rgba(26, 115, 232, 0.1)',
                     borderWidth: 2,
                     fill: true,
-                    tension: 0.1
+                    tension: 0.1,
+                    pointRadius: 2,
+                    pointHoverRadius: 5
                 }]
             },
             options: {
@@ -229,7 +241,7 @@ function createOrUpdateChart(endpoint, name, data) {
                         callbacks: {
                             label: function(context) {
                                 const value = context.parsed.y;
-                                return `${name}: ${value.toLocaleString('pt-BR')} MW`;
+                                return `${name}: ${formatNumber(value)} MW`;
                             }
                         }
                     }
@@ -243,7 +255,7 @@ function createOrUpdateChart(endpoint, name, data) {
                         },
                         ticks: {
                             callback: function(value) {
-                                return value.toLocaleString('pt-BR');
+                                return formatNumber(value);
                             }
                         }
                     },
@@ -254,7 +266,9 @@ function createOrUpdateChart(endpoint, name, data) {
                         },
                         ticks: {
                             maxRotation: 45,
-                            minRotation: 45
+                            minRotation: 45,
+                            autoSkip: true,
+                            maxTicksLimit: 24
                         }
                     }
                 },
