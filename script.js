@@ -126,24 +126,40 @@ function processData(data) {
     
     // Processar e ordenar dados
     const dadosProcessados = data
-        .filter(item => item && item.instante && item.geracao)
         .map(item => {
-            const date = new Date(item.instante);
-            const valor = parseFloat(item.geracao);
+            if (!item || !item.instante || !item.geracao) {
+                console.log('Item inválido:', item);
+                return null;
+            }
             
-            return {
-                timestamp: date.getTime(),
-                date,
-                valor,
-                horaFormatada: date.toLocaleTimeString('pt-BR', { 
-                    hour: '2-digit', 
-                    minute: '2-digit'
-                })
-            };
+            try {
+                const date = new Date(item.instante);
+                const valor = parseFloat(item.geracao);
+                
+                if (isNaN(valor) || isNaN(date.getTime())) {
+                    console.log('Valor ou data inválida:', { valor, date, item });
+                    return null;
+                }
+                
+                return {
+                    timestamp: date.getTime(),
+                    date,
+                    valor,
+                    horaFormatada: date.toLocaleTimeString('pt-BR', { 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                    })
+                };
+            } catch (error) {
+                console.error('Erro ao processar item:', error, item);
+                return null;
+            }
         })
+        .filter(item => item !== null)
         .sort((a, b) => a.timestamp - b.timestamp);
 
     console.log('Primeiro item processado:', dadosProcessados[0]);
+    console.log('Quantidade de itens processados:', dadosProcessados.length);
     
     const processed = {
         labels: dadosProcessados.map(item => item.horaFormatada),
@@ -151,10 +167,14 @@ function processData(data) {
     };
     
     console.log('📊 ETAPA 4: Dados processados para o gráfico:');
-    console.log('Total de pontos:', processed.labels.length);
+    console.log('Total de pontos:', processed.values.length);
     console.log('Primeiro horário:', processed.labels[0]);
     console.log('Último horário:', processed.labels[processed.labels.length - 1]);
     console.log('Exemplo de valores:', processed.values.slice(0, 5));
+    console.log('Range de valores:', {
+        min: Math.min(...processed.values),
+        max: Math.max(...processed.values)
+    });
     
     return processed;
 }
@@ -163,6 +183,15 @@ function processData(data) {
 function createOrUpdateChart(endpoint, name, data) {
     console.log('----------------------------------------');
     console.log(`📈 ETAPA 5: Criando/atualizando gráfico para ${name}`);
+    
+    if (!data.values.length) {
+        console.error('Nenhum dado para exibir no gráfico');
+        return;
+    }
+    
+    const minValue = Math.min(...data.values);
+    const maxValue = Math.max(...data.values);
+    console.log('Range de valores para o gráfico:', { minValue, maxValue });
     
     const chartsContainer = document.querySelector('.charts-container');
     let chartWrapper = document.getElementById(`chart-${endpoint}`);
@@ -229,7 +258,9 @@ function createOrUpdateChart(endpoint, name, data) {
                             callback: function(value) {
                                 return formatNumber(value);
                             }
-                        }
+                        },
+                        suggestedMin: minValue * 0.95,
+                        suggestedMax: maxValue * 1.05
                     },
                     x: {
                         title: {
@@ -258,6 +289,8 @@ function createOrUpdateChart(endpoint, name, data) {
         const chart = charts.get(endpoint);
         chart.data.labels = data.labels;
         chart.data.datasets[0].data = data.values;
+        chart.options.scales.y.suggestedMin = minValue * 0.95;
+        chart.options.scales.y.suggestedMax = maxValue * 1.05;
         chart.update();
         console.log('✅ Gráfico atualizado com sucesso');
     }
