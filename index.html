@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard ONS - Energia Agora</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Chart.js para criar os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- CORS Anywhere para contornar restrições de CORS -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Dashboard ONS - Energia Agora</h1>
+    </header>
+
+    <main>
+        <div class="controls">
+            <div class="endpoint-selector">
+                <h2>Selecione os dados para visualizar:</h2>
+                <div class="endpoint-groups">
+                    <!-- Os grupos de endpoints serão inseridos aqui via JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <!-- Os gráficos serão inseridos aqui via JavaScript -->
+        </div>
+    </main>
+
+    <footer>
+        <p>Dados fornecidos pela API do ONS (Operador Nacional do Sistema Elétrico)</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html> 
