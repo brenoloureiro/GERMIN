@@ -72,15 +72,24 @@ async function fetchONSData(endpoint) {
         
         const response = await axios.get(fullUrl, {
             headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Origin': window.location.origin
+                'X-Requested-With': 'XMLHttpRequest'
             }
         });
         
-        console.log('✅ ETAPA 2: Dados recebidos da API:');
-        console.log('Estrutura completa dos dados:', response.data);
-        console.log('Primeiro item dos dados:', response.data[0]);
-        console.log('Quantidade de itens:', response.data.length);
+        console.log('✅ ETAPA 2: Dados brutos da API:');
+        console.log('----------------------------------------');
+        console.log('ESTRUTURA COMPLETA DO PRIMEIRO ITEM:');
+        console.log(JSON.stringify(response.data[0], null, 2));
+        console.log('----------------------------------------');
+        console.log('PRIMEIROS 5 ITENS DA RESPOSTA:');
+        console.log(JSON.stringify(response.data.slice(0, 5), null, 2));
+        console.log('----------------------------------------');
+        console.log('ÚLTIMOS 5 ITENS DA RESPOSTA:');
+        console.log(JSON.stringify(response.data.slice(-5), null, 2));
+        console.log('----------------------------------------');
+        console.log('INFORMAÇÕES GERAIS:');
+        console.log('Total de registros:', response.data.length);
+        console.log('Campos disponíveis:', Object.keys(response.data[0]));
         
         if (!response.data || !Array.isArray(response.data)) {
             console.error('❌ ERRO: Dados não estão no formato esperado');
@@ -107,48 +116,63 @@ function processData(data) {
     }
     
     // Vamos analisar a estrutura dos dados
-    console.log('Exemplo do primeiro item:', data[0]);
-    console.log('Propriedades disponíveis:', Object.keys(data[0]));
+    const primeiroItem = data[0];
+    console.log('Primeiro item (raw):', JSON.stringify(primeiroItem, null, 2));
     
-    // Filtrar dados válidos e ordenar
-    const dadosValidos = data
-        .filter(item => item && item.Data && item.Valor)
-        .map(item => ({
-            ...item,
-            timestamp: new Date(item.Data).getTime()
-        }))
-        .sort((a, b) => a.timestamp - b.timestamp);
+    // Filtrar dados válidos
+    const dadosValidos = data.filter(item => {
+        const valido = item && typeof item.Data === 'string' && item.Data.includes('/Date(') && !isNaN(parseFloat(item.Valor));
+        if (!valido) {
+            console.log('Item inválido encontrado:', item);
+        }
+        return valido;
+    });
 
-    console.log('Primeiro item após filtro:', dadosValidos[0]);
+    console.log('Quantidade de dados válidos:', dadosValidos.length);
     
-    const processed = {
-        labels: dadosValidos.map(item => {
-            // A data vem no formato "/Date(1709337600000)/"
-            const timestamp = parseInt(item.Data.match(/\d+/)[0]);
-            const date = new Date(timestamp);
-            const timeStr = date.toLocaleTimeString('pt-BR', { 
+    // Processar e ordenar dados
+    const dadosProcessados = dadosValidos.map(item => {
+        const match = item.Data.match(/\/Date\((\d+)\)\//);
+        if (!match) {
+            console.error('Formato de data inválido:', item.Data);
+            return null;
+        }
+        
+        const timestamp = parseInt(match[1]);
+        const date = new Date(timestamp);
+        const valor = parseFloat(item.Valor);
+        
+        return {
+            timestamp,
+            date,
+            valor,
+            horaFormatada: date.toLocaleTimeString('pt-BR', { 
                 hour: '2-digit', 
                 minute: '2-digit'
-            });
-            console.log('Data original:', item.Data);
-            console.log('Timestamp extraído:', timestamp);
-            console.log('Data convertida:', date);
-            console.log('Hora formatada:', timeStr);
-            return timeStr;
-        }),
-        values: dadosValidos.map(item => {
-            const valor = parseFloat(item.Valor);
-            console.log('Valor original:', item.Valor);
-            console.log('Valor convertido:', valor);
-            return valor;
-        })
+            })
+        };
+    })
+    .filter(item => item !== null)
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+    console.log('Exemplo de dado processado:', dadosProcessados[0]);
+    
+    const processed = {
+        labels: dadosProcessados.map(item => item.horaFormatada),
+        values: dadosProcessados.map(item => item.valor)
     };
     
     console.log('📊 ETAPA 4: Dados processados para o gráfico:');
     console.log('Total de pontos:', processed.labels.length);
-    console.log('Primeiro horário:', processed.labels[0]);
-    console.log('Último horário:', processed.labels[processed.labels.length - 1]);
-    console.log('Exemplo de valores:', processed.values.slice(0, 5));
+    console.log('Intervalo de tempo:', {
+        primeiro: processed.labels[0],
+        ultimo: processed.labels[processed.labels.length - 1]
+    });
+    console.log('Intervalo de valores:', {
+        min: Math.min(...processed.values),
+        max: Math.max(...processed.values),
+        media: processed.values.reduce((a, b) => a + b, 0) / processed.values.length
+    });
     
     return processed;
 }
