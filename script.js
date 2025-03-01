@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.7";
+const DASHBOARD_VERSION = "1.0.8";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
@@ -100,26 +100,35 @@ async function fetchONSData(endpoint) {
         
         console.log('✅ ETAPA 2: Dados recebidos da API:');
         console.log('----------------------------------------');
-        console.log('ESTRUTURA COMPLETA DO PRIMEIRO ITEM:');
-        console.log(JSON.stringify(response.data[0], null, 2));
+        console.log('DADOS BRUTOS:');
+        console.log(response.data);
         console.log('----------------------------------------');
-        console.log('PRIMEIROS 5 ITENS DA RESPOSTA:');
-        console.log(JSON.stringify(response.data.slice(0, 5), null, 2));
-        console.log('----------------------------------------');
-        console.log('ÚLTIMOS 5 ITENS DA RESPOSTA:');
-        console.log(JSON.stringify(response.data.slice(-5), null, 2));
-        console.log('----------------------------------------');
-        console.log('INFORMAÇÕES GERAIS:');
-        console.log('Total de registros:', response.data.length);
-        console.log('Campos disponíveis:', Object.keys(response.data[0]));
         
-        if (!response.data || !Array.isArray(response.data)) {
+        if (!response.data) {
             console.error('❌ ERRO: Dados não estão no formato esperado');
             alert(`Erro ao carregar dados para ${endpoint}. Formato inválido.`);
             return null;
         }
         
-        return response.data;
+        // Verificar se é um array ou objeto
+        const dados = Array.isArray(response.data) ? response.data : [response.data];
+        
+        console.log('ESTRUTURA COMPLETA DO PRIMEIRO ITEM:');
+        console.log(JSON.stringify(dados[0], null, 2));
+        console.log('----------------------------------------');
+        console.log('PRIMEIROS 5 ITENS:');
+        console.log(JSON.stringify(dados.slice(0, 5), null, 2));
+        console.log('----------------------------------------');
+        console.log('ÚLTIMOS 5 ITENS:');
+        console.log(JSON.stringify(dados.slice(-5), null, 2));
+        console.log('----------------------------------------');
+        console.log('INFORMAÇÕES GERAIS:');
+        console.log('Total de registros:', dados.length);
+        if (dados[0]) {
+            console.log('Campos disponíveis:', Object.keys(dados[0]));
+        }
+        
+        return dados;
     } catch (error) {
         console.error('❌ ERRO na requisição:', error);
         
@@ -154,19 +163,29 @@ function processData(data) {
     
     // Vamos analisar a estrutura dos dados
     console.log('Exemplo do primeiro item:', data[0]);
-    console.log('Propriedades disponíveis:', Object.keys(data[0]));
+    
+    // Determinar campos baseado no primeiro item
+    let campoValor = 'geracao';
+    let campoData = 'instante';
+    
+    if (data[0]) {
+        if ('valor' in data[0]) campoValor = 'valor';
+        if ('data' in data[0]) campoData = 'data';
+    }
+    
+    console.log('Campos identificados:', { campoValor, campoData });
     
     // Processar e ordenar dados
     const dadosProcessados = data
         .map(item => {
-            if (!item || !item.instante || !item.geracao) {
+            if (!item || !item[campoData] || !item[campoValor]) {
                 console.log('Item inválido:', item);
                 return null;
             }
             
             try {
-                const date = new Date(item.instante);
-                const valor = parseFloat(item.geracao);
+                const date = new Date(item[campoData]);
+                const valor = parseFloat(item[campoValor]);
                 
                 if (isNaN(valor) || isNaN(date.getTime())) {
                     console.log('Valor ou data inválida:', { valor, date, item });
