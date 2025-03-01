@@ -106,6 +106,9 @@ function processData(data) {
         return { labels: [], values: [] };
     }
     
+    // Ordenar dados por data
+    data.sort((a, b) => new Date(a.Data) - new Date(b.Data));
+    
     // Vamos analisar a estrutura dos dados
     console.log('Exemplo do primeiro item:', data[0]);
     console.log('Propriedades disponíveis:', Object.keys(data[0]));
@@ -113,19 +116,28 @@ function processData(data) {
     const processed = {
         labels: data.map(item => {
             const date = new Date(item.Data);
+            // Formatar apenas hora e minuto
+            const timeStr = date.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit'
+            });
             console.log('Data original:', item.Data);
-            console.log('Data convertida:', date.toLocaleString());
-            return date.toLocaleString();
+            console.log('Hora formatada:', timeStr);
+            return timeStr;
         }),
         values: data.map(item => {
+            const valor = parseFloat(item.Valor);
             console.log('Valor original:', item.Valor);
-            return parseFloat(item.Valor);
+            console.log('Valor convertido:', valor);
+            return valor;
         })
     };
     
     console.log('📊 ETAPA 4: Dados processados para o gráfico:');
-    console.log('Labels (primeiros 3):', processed.labels.slice(0, 3));
-    console.log('Valores (primeiros 3):', processed.values.slice(0, 3));
+    console.log('Total de pontos:', processed.labels.length);
+    console.log('Primeiro horário:', processed.labels[0]);
+    console.log('Último horário:', processed.labels[processed.labels.length - 1]);
+    console.log('Exemplo de valores:', processed.values.slice(0, 5));
     
     return processed;
 }
@@ -134,11 +146,6 @@ function processData(data) {
 function createOrUpdateChart(endpoint, name, data) {
     console.log('----------------------------------------');
     console.log(`📈 ETAPA 5: Criando/atualizando gráfico para ${name}`);
-    console.log('Dados para o gráfico:', {
-        labels: data.labels.length + ' pontos',
-        values: data.values.length + ' pontos',
-        'Exemplo de valores': data.values.slice(0, 3)
-    });
     
     const chartsContainer = document.querySelector('.charts-container');
     let chartWrapper = document.getElementById(`chart-${endpoint}`);
@@ -170,7 +177,7 @@ function createOrUpdateChart(endpoint, name, data) {
                     backgroundColor: 'rgba(26, 115, 232, 0.1)',
                     borderWidth: 2,
                     fill: true,
-                    tension: 0.4
+                    tension: 0.1
                 }]
             },
             options: {
@@ -186,7 +193,8 @@ function createOrUpdateChart(endpoint, name, data) {
                         intersect: false,
                         callbacks: {
                             label: function(context) {
-                                return `${name}: ${context.parsed.y.toLocaleString()} MW`;
+                                const value = context.parsed.y;
+                                return `${name}: ${value.toLocaleString('pt-BR')} MW`;
                             }
                         }
                     }
@@ -197,14 +205,27 @@ function createOrUpdateChart(endpoint, name, data) {
                         title: {
                             display: true,
                             text: 'Potência (MW)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString('pt-BR');
+                            }
                         }
                     },
                     x: {
                         title: {
                             display: true,
-                            text: 'Data/Hora'
+                            text: 'Hora'
+                        },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
                         }
                     }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
                 }
             }
         });
