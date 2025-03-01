@@ -126,7 +126,7 @@ function processData(data) {
     
     // Filtrar dados válidos
     const dadosValidos = data.filter(item => {
-        const valido = item && typeof item.Data === 'string' && item.Data.includes('/Date(') && !isNaN(parseFloat(item.Valor));
+        const valido = item && item.instante && !isNaN(parseFloat(item.geracao));
         if (!valido) {
             console.log('Item inválido encontrado:', item);
         }
@@ -137,23 +137,16 @@ function processData(data) {
     
     // Processar e ordenar dados
     const dadosProcessados = dadosValidos.map(item => {
-        const match = item.Data.match(/\/Date\((\d+)\)\//);
-        if (!match) {
-            console.error('Formato de data inválido:', item.Data);
-            return null;
-        }
-        
-        const timestamp = parseInt(match[1]);
-        const date = new Date(timestamp);
-        const valor = parseFloat(item.Valor);
+        const date = new Date(item.instante);
+        const valor = parseFloat(item.geracao);
         
         if (isNaN(valor)) {
-            console.error('Valor inválido:', item.Valor);
+            console.error('Valor inválido:', item.geracao);
             return null;
         }
         
         return {
-            timestamp,
+            timestamp: date.getTime(),
             date,
             valor,
             horaFormatada: date.toLocaleTimeString('pt-BR', { 
@@ -223,8 +216,9 @@ function createOrUpdateChart(endpoint, name, data) {
                     borderWidth: 2,
                     fill: true,
                     tension: 0.1,
-                    pointRadius: 2,
-                    pointHoverRadius: 5
+                    pointRadius: 1,
+                    pointHoverRadius: 5,
+                    spanGaps: true
                 }]
             },
             options: {
@@ -248,7 +242,7 @@ function createOrUpdateChart(endpoint, name, data) {
                 },
                 scales: {
                     y: {
-                        beginAtZero: true,
+                        beginAtZero: false,
                         title: {
                             display: true,
                             text: 'Potência (MW)'
