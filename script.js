@@ -121,44 +121,29 @@ function processData(data) {
     }
     
     // Vamos analisar a estrutura dos dados
-    const primeiroItem = data[0];
-    console.log('Primeiro item (raw):', JSON.stringify(primeiroItem, null, 2));
-    
-    // Filtrar dados válidos
-    const dadosValidos = data.filter(item => {
-        const valido = item && item.instante && !isNaN(parseFloat(item.geracao));
-        if (!valido) {
-            console.log('Item inválido encontrado:', item);
-        }
-        return valido;
-    });
-
-    console.log('Quantidade de dados válidos:', dadosValidos.length);
+    console.log('Exemplo do primeiro item:', data[0]);
+    console.log('Propriedades disponíveis:', Object.keys(data[0]));
     
     // Processar e ordenar dados
-    const dadosProcessados = dadosValidos.map(item => {
-        const date = new Date(item.instante);
-        const valor = parseFloat(item.geracao);
-        
-        if (isNaN(valor)) {
-            console.error('Valor inválido:', item.geracao);
-            return null;
-        }
-        
-        return {
-            timestamp: date.getTime(),
-            date,
-            valor,
-            horaFormatada: date.toLocaleTimeString('pt-BR', { 
-                hour: '2-digit', 
-                minute: '2-digit'
-            })
-        };
-    })
-    .filter(item => item !== null)
-    .sort((a, b) => a.timestamp - b.timestamp);
+    const dadosProcessados = data
+        .filter(item => item && item.instante && item.geracao)
+        .map(item => {
+            const date = new Date(item.instante);
+            const valor = parseFloat(item.geracao);
+            
+            return {
+                timestamp: date.getTime(),
+                date,
+                valor,
+                horaFormatada: date.toLocaleTimeString('pt-BR', { 
+                    hour: '2-digit', 
+                    minute: '2-digit'
+                })
+            };
+        })
+        .sort((a, b) => a.timestamp - b.timestamp);
 
-    console.log('Exemplo de dado processado:', dadosProcessados[0]);
+    console.log('Primeiro item processado:', dadosProcessados[0]);
     
     const processed = {
         labels: dadosProcessados.map(item => item.horaFormatada),
@@ -167,15 +152,9 @@ function processData(data) {
     
     console.log('📊 ETAPA 4: Dados processados para o gráfico:');
     console.log('Total de pontos:', processed.labels.length);
-    console.log('Intervalo de tempo:', {
-        primeiro: processed.labels[0],
-        ultimo: processed.labels[processed.labels.length - 1]
-    });
-    console.log('Intervalo de valores:', {
-        min: Math.min(...processed.values),
-        max: Math.max(...processed.values),
-        media: processed.values.reduce((a, b) => a + b, 0) / processed.values.length
-    });
+    console.log('Primeiro horário:', processed.labels[0]);
+    console.log('Último horário:', processed.labels[processed.labels.length - 1]);
+    console.log('Exemplo de valores:', processed.values.slice(0, 5));
     
     return processed;
 }
@@ -214,11 +193,10 @@ function createOrUpdateChart(endpoint, name, data) {
                     borderColor: '#1a73e8',
                     backgroundColor: 'rgba(26, 115, 232, 0.1)',
                     borderWidth: 2,
-                    fill: true,
+                    fill: false,
                     tension: 0.1,
-                    pointRadius: 1,
-                    pointHoverRadius: 5,
-                    spanGaps: true
+                    pointRadius: 0,
+                    pointHoverRadius: 5
                 }]
             },
             options: {
@@ -262,7 +240,7 @@ function createOrUpdateChart(endpoint, name, data) {
                             maxRotation: 45,
                             minRotation: 45,
                             autoSkip: true,
-                            maxTicksLimit: 24
+                            maxTicksLimit: 12
                         }
                     }
                 },
