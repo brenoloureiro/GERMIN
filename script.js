@@ -65,37 +65,82 @@ function createEndpointSelectors() {
 // Função para fazer requisição à API
 async function fetchONSData(endpoint) {
     try {
-        const response = await axios.get(`${CORS_PROXY}${API_BASE_URL}/${endpoint}`, {
+        console.log(`Fazendo requisição para endpoint: ${endpoint}`);
+        const fullUrl = `${CORS_PROXY}${API_BASE_URL}/${endpoint}`;
+        console.log(`URL completa: ${fullUrl}`);
+        
+        const response = await axios.get(fullUrl, {
             headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                'Origin': window.location.origin
             }
         });
+        
+        console.log(`Resposta recebida para ${endpoint}:`, response.data);
+        
+        if (!response.data || !Array.isArray(response.data)) {
+            console.error(`Dados inválidos recebidos para ${endpoint}:`, response.data);
+            alert(`Erro ao carregar dados para ${endpoint}. Formato inválido.`);
+            return null;
+        }
+        
         return response.data;
     } catch (error) {
-        console.error('Erro ao buscar dados:', error);
+        console.error(`Erro ao fazer requisição para ${endpoint}:`, error);
+        console.error('Detalhes do erro:', {
+            message: error.message,
+            response: error.response,
+            request: error.request
+        });
+        
+        let errorMessage = 'Erro ao carregar dados. ';
+        if (error.response) {
+            errorMessage += `Status: ${error.response.status}. `;
+            if (error.response.status === 403) {
+                errorMessage += 'Por favor, visite https://cors-anywhere.herokuapp.com/corsdemo e solicite acesso temporário.';
+            }
+        } else if (error.request) {
+            errorMessage += 'Sem resposta do servidor.';
+        } else {
+            errorMessage += error.message;
+        }
+        
+        alert(errorMessage);
         return null;
     }
 }
 
 // Função para processar os dados recebidos da API
 function processData(data) {
-    if (!data || !Array.isArray(data)) return { labels: [], values: [] };
+    if (!data || !Array.isArray(data)) {
+        console.error('Dados inválidos recebidos:', data);
+        return { labels: [], values: [] };
+    }
     
-    return {
+    console.log('Processando dados:', data);
+    
+    const processed = {
         labels: data.map(item => new Date(item.Data).toLocaleString()),
         values: data.map(item => item.Valor)
     };
+    
+    console.log('Dados processados:', processed);
+    return processed;
 }
 
 // Função para criar ou atualizar um gráfico
 function createOrUpdateChart(endpoint, name, data) {
+    console.log(`Criando/atualizando gráfico para ${endpoint}:`, data);
+    
     const chartsContainer = document.querySelector('.charts-container');
     let chartWrapper = document.getElementById(`chart-${endpoint}`);
     
     if (!chartWrapper) {
+        console.log(`Criando novo wrapper para ${endpoint}`);
         chartWrapper = document.createElement('div');
         chartWrapper.id = `chart-${endpoint}`;
         chartWrapper.className = 'chart-wrapper';
+        chartWrapper.style.height = '400px'; // Altura fixa para o wrapper
         
         const title = document.createElement('h3');
         title.textContent = name;
@@ -124,19 +169,36 @@ function createOrUpdateChart(endpoint, name, data) {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: false
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
                     }
                 },
                 scales: {
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Valor'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Data/Hora'
+                        }
                     }
                 }
             }
         });
         
+        console.log(`Novo gráfico criado para ${endpoint}`);
         charts.set(endpoint, newChart);
     } else {
+        console.log(`Atualizando gráfico existente para ${endpoint}`);
         const chart = charts.get(endpoint);
         chart.data.labels = data.labels;
         chart.data.datasets[0].data = data.values;
