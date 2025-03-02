@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.17";
+const DASHBOARD_VERSION = "1.0.18";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
@@ -88,13 +88,14 @@ const GERACAO_COLORS = {
     'Nuclear': '#ff0000',     // Vermelho
     'Hidráulica': '#2ecc71',  // Verde
     'Total': '#6c757d',       // Cinza
-    'Carga': '#000000'        // Preto
+    'Carga': '#000000',       // Preto
+    'default': '#1a73e8'      // Azul (padrão)
 };
 
 // Configuração do estilo de linha por tipo
 const LINE_STYLE = {
-    'Carga': [10, 5], // Linha tracejada para carga
-    'default': [] // Linha sólida para os demais
+    'Carga': [10, 5], // Linha tracejada para carga (10px linha, 5px espaço)
+    'default': []     // Linha sólida para os demais
 };
 
 // Função para criar o seletor de sistema
@@ -468,7 +469,7 @@ function createOrUpdateChart(endpoint, name, data) {
     // Extrair o tipo e sistema do nome
     const partes = name.split(' - ');
     const sistema = partes[0];
-    const tipo = partes[partes.length - 1];
+    const tipo = partes.length > 1 ? partes[partes.length - 1] : '';
     
     // Determinar o ID do gráfico baseado no tipo de dado
     let chartId;
@@ -485,7 +486,7 @@ function createOrUpdateChart(endpoint, name, data) {
     const datasetConfig = {
         label: tipo,
         data: data.values,
-        borderColor: GERACAO_COLORS[tipo] || '#1a73e8',
+        borderColor: GERACAO_COLORS[tipo] || GERACAO_COLORS.default,
         backgroundColor: 'transparent',
         borderWidth: tipo === 'Total' ? 3 : 2,
         fill: false,
@@ -645,45 +646,51 @@ function removeChart(endpoint) {
     console.log('Chart ID:', chartId);
     
     const chartWrapper = document.getElementById(chartId);
-    if (chartWrapper) {
-        const chart = charts.get(chartId);
-        if (chart) {
-            // Se for um gráfico de geração ou carga, remover apenas o dataset específico
-            if (endpoint.includes('Geracao') || endpoint.includes('Carga')) {
-                const tipo = endpoint.includes('Carga') ? 'Carga' : partes[3].replace('_json', '');
-                console.log('Removendo dataset do tipo:', tipo);
-                
-                const datasetIndex = chart.data.datasets.findIndex(ds => ds.label === tipo);
-                console.log('Dataset index:', datasetIndex);
-                
-                if (datasetIndex !== -1) {
-                    // Remover o dataset
-                    chart.data.datasets.splice(datasetIndex, 1);
-                    
-                    // Se for geração, atualizar o total
-                    if (endpoint.includes('Geracao')) {
-                        updateGeracaoTotal(chart, sistema);
-                    }
-                    
-                    // Se não houver mais datasets, remover o gráfico
-                    if (chart.data.datasets.length === 0) {
-                        console.log('Removendo gráfico completo - sem datasets');
-                        chart.destroy();
-                        charts.delete(chartId);
-                        chartWrapper.remove();
-                    } else {
-                        console.log('Atualizando gráfico após remoção do dataset');
-                        chart.update();
-                    }
-                }
-            } else {
-                // Para outros tipos de gráficos, remover completamente
-                console.log('Removendo gráfico completo');
+    if (!chartWrapper) {
+        console.log('Chart wrapper não encontrado');
+        return;
+    }
+    
+    const chart = charts.get(chartId);
+    if (!chart) {
+        console.log('Chart não encontrado no Map');
+        return;
+    }
+    
+    // Se for um gráfico de geração ou carga, remover apenas o dataset específico
+    if (endpoint.includes('Geracao') || endpoint.includes('Carga')) {
+        const tipo = endpoint.includes('Carga') ? 'Carga' : partes[3].replace('_json', '');
+        console.log('Removendo dataset do tipo:', tipo);
+        
+        const datasetIndex = chart.data.datasets.findIndex(ds => ds.label === tipo);
+        console.log('Dataset index:', datasetIndex);
+        
+        if (datasetIndex !== -1) {
+            // Remover o dataset
+            chart.data.datasets.splice(datasetIndex, 1);
+            
+            // Se for geração, atualizar o total
+            if (endpoint.includes('Geracao')) {
+                updateGeracaoTotal(chart, sistema);
+            }
+            
+            // Se não houver mais datasets, remover o gráfico
+            if (chart.data.datasets.length === 0) {
+                console.log('Removendo gráfico completo - sem datasets');
                 chart.destroy();
                 charts.delete(chartId);
                 chartWrapper.remove();
+            } else {
+                console.log('Atualizando gráfico após remoção do dataset');
+                chart.update('none'); // Usar 'none' para atualização mais rápida
             }
         }
+    } else {
+        // Para outros tipos de gráficos, remover completamente
+        console.log('Removendo gráfico completo');
+        chart.destroy();
+        charts.delete(chartId);
+        chartWrapper.remove();
     }
 }
 
