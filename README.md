@@ -1,4 +1,4 @@
-# Dashboard ONS - Energia Agora
+# Dashboard ONS - Energia Agora (v1.0.14)
 
 Este é um dashboard web que exibe dados em tempo real do Sistema Interligado Nacional (SIN) através da API do ONS (Operador Nacional do Sistema Elétrico).
 
