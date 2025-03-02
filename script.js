@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.18";
+const DASHBOARD_VERSION = "1.0.19";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
@@ -351,6 +351,18 @@ function formatNumber(value) {
     return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+// Função para gerar labels de hora para o dia inteiro
+function generateHourLabels() {
+    const labels = [];
+    for (let hora = 0; hora < 24; hora++) {
+        for (let minuto = 0; minuto < 60; minuto += 30) {
+            const horaFormatada = `${hora.toString().padStart(2, '0')}:${minuto.toString().padStart(2, '0')}`;
+            labels.push(horaFormatada);
+        }
+    }
+    return labels;
+}
+
 // Função para processar os dados recebidos da API
 function processData(data) {
     console.log('----------------------------------------');
@@ -358,7 +370,7 @@ function processData(data) {
     
     if (!data || !Array.isArray(data)) {
         console.error('❌ ERRO: Dados inválidos recebidos');
-        return { labels: [], values: [] };
+        return { labels: generateHourLabels(), values: Array(48).fill(null) };
     }
     
     // Vamos analisar a estrutura dos dados
@@ -384,61 +396,56 @@ function processData(data) {
         console.error('❌ ERRO: Não foi possível identificar os campos necessários');
         console.log('Campos disponíveis:', Object.keys(data[0]));
         alert('Erro ao processar dados: estrutura não reconhecida');
-        return { labels: [], values: [] };
+        return { labels: generateHourLabels(), values: Array(48).fill(null) };
     }
     
     console.log('Campos identificados:', { campoValor, campoData });
     
-    // Processar e ordenar dados
-    const dadosProcessados = data
-        .map(item => {
-            if (!item || !item[campoData] || !item[campoValor]) {
-                console.log('Item inválido:', item);
-                return null;
+    // Criar um mapa de valores por hora:minuto
+    const valoresPorHora = new Map();
+    const horasCompletas = generateHourLabels();
+    
+    // Inicializar com null para todas as horas
+    horasCompletas.forEach(hora => {
+        valoresPorHora.set(hora, null);
+    });
+    
+    // Processar dados recebidos
+    data.forEach(item => {
+        if (!item || !item[campoData] || !item[campoValor]) {
+            return;
+        }
+        
+        try {
+            const date = new Date(item[campoData]);
+            const valor = parseFloat(item[campoValor]);
+            
+            if (isNaN(valor) || isNaN(date.getTime())) {
+                return;
             }
             
-            try {
-                const date = new Date(item[campoData]);
-                const valor = parseFloat(item[campoValor]);
-                
-                if (isNaN(valor) || isNaN(date.getTime())) {
-                    console.log('Valor ou data inválida:', { valor, date, item });
-                    return null;
-                }
-                
-                return {
-                    timestamp: date.getTime(),
-                    date,
-                    valor,
-                    horaFormatada: date.toLocaleTimeString('pt-BR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit'
-                    })
-                };
-            } catch (error) {
-                console.error('Erro ao processar item:', error, item);
-                return null;
-            }
-        })
-        .filter(item => item !== null)
-        .sort((a, b) => a.timestamp - b.timestamp);
-
-    console.log('Primeiro item processado:', dadosProcessados[0]);
-    console.log('Quantidade de itens processados:', dadosProcessados.length);
+            const horaFormatada = date.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit'
+            });
+            
+            valoresPorHora.set(horaFormatada, valor);
+        } catch (error) {
+            console.error('Erro ao processar item:', error, item);
+        }
+    });
     
+    // Converter mapa em arrays ordenados
     const processed = {
-        labels: dadosProcessados.map(item => item.horaFormatada),
-        values: dadosProcessados.map(item => item.valor)
+        labels: horasCompletas,
+        values: horasCompletas.map(hora => valoresPorHora.get(hora))
     };
     
     console.log('📊 ETAPA 4: Dados processados para o gráfico:');
     console.log('Total de pontos:', processed.values.length);
-    console.log('Primeiro horário:', processed.labels[0]);
-    console.log('Último horário:', processed.labels[processed.labels.length - 1]);
-    console.log('Exemplo de valores:', processed.values.slice(0, 5));
     console.log('Range de valores:', {
-        min: Math.min(...processed.values),
-        max: Math.max(...processed.values)
+        min: Math.min(...processed.values.filter(v => v !== null)),
+        max: Math.max(...processed.values.filter(v => v !== null))
     });
     
     return processed;
@@ -469,7 +476,7 @@ function createOrUpdateChart(endpoint, name, data) {
     // Extrair o tipo e sistema do nome
     const partes = name.split(' - ');
     const sistema = partes[0];
-    const tipo = partes.length > 1 ? partes[partes.length - 1] : '';
+    const tipo = endpoint.includes('Carga') ? 'Carga' : (partes.length > 1 ? partes[partes.length - 1] : '');
     
     // Determinar o ID do gráfico baseado no tipo de dado
     let chartId;
@@ -493,7 +500,8 @@ function createOrUpdateChart(endpoint, name, data) {
         tension: 0.1,
         pointRadius: 0,
         pointHoverRadius: 5,
-        borderDash: LINE_STYLE[tipo] || LINE_STYLE.default
+        borderDash: LINE_STYLE[tipo] || LINE_STYLE.default,
+        spanGaps: true // Permite que a linha continue mesmo com valores null
     };
 
     if (!chartWrapper) {
@@ -532,6 +540,7 @@ function createOrUpdateChart(endpoint, name, data) {
                         callbacks: {
                             label: function(context) {
                                 const value = context.parsed.y;
+                                if (value === null) return `${context.dataset.label}: Sem dados`;
                                 return `${context.dataset.label}: ${formatNumber(value)} MW`;
                             }
                         }
@@ -559,7 +568,7 @@ function createOrUpdateChart(endpoint, name, data) {
                             maxRotation: 45,
                             minRotation: 45,
                             autoSkip: true,
-                            maxTicksLimit: 12
+                            maxTicksLimit: 24
                         }
                     }
                 },
