@@ -80,6 +80,15 @@ const CORS_PROXY = "https://cors-anywhere.herokuapp.com/";
 // Objeto para armazenar as instâncias dos gráficos
 const charts = new Map();
 
+// Configuração das cores por tipo de geração
+const GERACAO_COLORS = {
+    'Eólica': '#1a73e8',      // Azul
+    'Solar': '#ffd700',       // Amarelo
+    'Térmica': '#ff8c00',     // Laranja
+    'Nuclear': '#ff0000',     // Vermelho
+    'Hidráulica': '#2ecc71'   // Verde
+};
+
 // Função para criar o seletor de sistema
 function createSystemSelector() {
     const container = document.querySelector('.controls');
@@ -430,20 +439,24 @@ function createOrUpdateChart(endpoint, name, data) {
         month: '2-digit',
         year: 'numeric'
     });
-    const tituloCompleto = `${name} - ${dataFormatada}`;
+    
+    // Extrair o tipo de geração do nome
+    const tipoGeracao = name.split(' - ').pop();
+    const sistema = name.split(' - ')[0];
+    const chartId = `chart-geracao-${sistema.toLowerCase().replace(/\s+/g, '-')}`;
     
     const chartsContainer = document.querySelector('.charts-container');
-    let chartWrapper = document.getElementById(`chart-${endpoint}`);
+    let chartWrapper = document.getElementById(chartId);
     
     if (!chartWrapper) {
         console.log('Criando novo wrapper e canvas');
         chartWrapper = document.createElement('div');
-        chartWrapper.id = `chart-${endpoint}`;
+        chartWrapper.id = chartId;
         chartWrapper.className = 'chart-wrapper';
         chartWrapper.style.height = '400px';
         
         const title = document.createElement('h3');
-        title.textContent = tituloCompleto;
+        title.textContent = `Geração por Fonte - ${sistema} - ${dataFormatada}`;
         chartWrapper.appendChild(title);
         
         const canvas = document.createElement('canvas');
@@ -456,10 +469,10 @@ function createOrUpdateChart(endpoint, name, data) {
             data: {
                 labels: data.labels,
                 datasets: [{
-                    label: name,
+                    label: tipoGeracao,
                     data: data.values,
-                    borderColor: '#1a73e8',
-                    backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                    borderColor: GERACAO_COLORS[tipoGeracao] || '#1a73e8',
+                    backgroundColor: 'transparent',
                     borderWidth: 2,
                     fill: false,
                     tension: 0.1,
@@ -481,7 +494,7 @@ function createOrUpdateChart(endpoint, name, data) {
                         callbacks: {
                             label: function(context) {
                                 const value = context.parsed.y;
-                                return `${name}: ${formatNumber(value)} MW`;
+                                return `${context.dataset.label}: ${formatNumber(value)} MW`;
                             }
                         }
                     }
@@ -497,9 +510,7 @@ function createOrUpdateChart(endpoint, name, data) {
                             callback: function(value) {
                                 return formatNumber(value);
                             }
-                        },
-                        suggestedMin: minValue * 0.95,
-                        suggestedMax: maxValue * 1.05
+                        }
                     },
                     x: {
                         title: {
@@ -522,14 +533,32 @@ function createOrUpdateChart(endpoint, name, data) {
         });
         
         console.log('✅ Gráfico criado com sucesso');
-        charts.set(endpoint, newChart);
+        charts.set(chartId, newChart);
     } else {
         console.log('Atualizando gráfico existente');
-        const chart = charts.get(endpoint);
-        chart.data.labels = data.labels;
-        chart.data.datasets[0].data = data.values;
-        chart.options.scales.y.suggestedMin = minValue * 0.95;
-        chart.options.scales.y.suggestedMax = maxValue * 1.05;
+        const chart = charts.get(chartId);
+        
+        // Verificar se o dataset já existe
+        const datasetIndex = chart.data.datasets.findIndex(ds => ds.label === tipoGeracao);
+        
+        if (datasetIndex === -1) {
+            // Adicionar novo dataset
+            chart.data.datasets.push({
+                label: tipoGeracao,
+                data: data.values,
+                borderColor: GERACAO_COLORS[tipoGeracao] || '#1a73e8',
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            });
+        } else {
+            // Atualizar dataset existente
+            chart.data.datasets[datasetIndex].data = data.values;
+        }
+        
         chart.update();
         console.log('✅ Gráfico atualizado com sucesso');
     }
@@ -537,14 +566,34 @@ function createOrUpdateChart(endpoint, name, data) {
 
 // Função para remover um gráfico
 function removeChart(endpoint) {
-    const chartWrapper = document.getElementById(`chart-${endpoint}`);
+    const name = endpoint.includes('Geracao') ? 'geracao' : endpoint;
+    const sistema = endpoint.split('_')[1];
+    const chartId = `chart-${name}-${sistema.toLowerCase()}`;
+    
+    const chartWrapper = document.getElementById(chartId);
     if (chartWrapper) {
-        const chart = charts.get(endpoint);
+        const chart = charts.get(chartId);
         if (chart) {
-            chart.destroy();
-            charts.delete(endpoint);
+            // Se for um gráfico de geração, remover apenas o dataset específico
+            if (endpoint.includes('Geracao')) {
+                const tipoGeracao = endpoint.split('_')[3].replace('_json', '');
+                const datasetIndex = chart.data.datasets.findIndex(ds => ds.label === tipoGeracao);
+                if (datasetIndex !== -1) {
+                    chart.data.datasets.splice(datasetIndex, 1);
+                    if (chart.data.datasets.length === 0) {
+                        chart.destroy();
+                        charts.delete(chartId);
+                        chartWrapper.remove();
+                    } else {
+                        chart.update();
+                    }
+                }
+            } else {
+                chart.destroy();
+                charts.delete(chartId);
+                chartWrapper.remove();
+            }
         }
-        chartWrapper.remove();
     }
 }
 
