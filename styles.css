@@ -115,6 +115,25 @@ footer {
     margin-top: 2rem;
 }
 
+.system-group {
+    background-color: #f0f4f8;
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+    border-radius: 4px;
+    border: 1px solid #e0e0e0;
+}
+
+.system-group h4 {
+    color: #1a73e8;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.system-group .endpoint-item {
+    margin-left: 1rem;
+}
+
 @media (max-width: 768px) {
     .endpoint-groups {
         grid-template-columns: 1fr;

@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.12";
+const DASHBOARD_VERSION = "1.0.13";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
@@ -8,12 +8,42 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos em milissegundos
 // Configuração dos endpoints disponíveis
 const ENDPOINTS_ONS = {
     "Geração": {
-        "Hidráulica": "Geracao_SIN_Hidraulica_json",
-        "Térmica": "Geracao_SIN_Termica_json",
-        "Eólica": "Geracao_SIN_Eolica_json",
-        "Solar": "Geracao_SIN_Solar_json",
-        "Nuclear": "Geracao_SIN_Nuclear_json",
-        "Total": "Geracao_SIN_Total_json"
+        "SIN": {
+            "Total": "Geracao_SIN_Total_json",
+            "Hidráulica": "Geracao_SIN_Hidraulica_json",
+            "Térmica": "Geracao_SIN_Termica_json",
+            "Eólica": "Geracao_SIN_Eolica_json",
+            "Solar": "Geracao_SIN_Solar_json",
+            "Nuclear": "Geracao_SIN_Nuclear_json"
+        },
+        "Norte": {
+            "Hidráulica": "Geracao_Norte_Hidraulica_json",
+            "Térmica": "Geracao_Norte_Termica_json",
+            "Eólica": "Geracao_Norte_Eolica_json",
+            "Solar": "Geracao_Norte_Solar_json",
+            "Nuclear": "Geracao_Norte_Nuclear_json"
+        },
+        "Nordeste": {
+            "Hidráulica": "Geracao_Nordeste_Hidraulica_json",
+            "Térmica": "Geracao_Nordeste_Termica_json",
+            "Eólica": "Geracao_Nordeste_Eolica_json",
+            "Solar": "Geracao_Nordeste_Solar_json",
+            "Nuclear": "Geracao_Nordeste_Nuclear_json"
+        },
+        "Sudeste/Centro-Oeste": {
+            "Hidráulica": "Geracao_SudesteECentroOeste_Hidraulica_json",
+            "Térmica": "Geracao_SudesteECentroOeste_Termica_json",
+            "Eólica": "Geracao_SudesteECentroOeste_Eolica_json",
+            "Solar": "Geracao_SudesteECentroOeste_Solar_json",
+            "Nuclear": "Geracao_SudesteECentroOeste_Nuclear_json"
+        },
+        "Sul": {
+            "Hidráulica": "Geracao_Sul_Hidraulica_json",
+            "Térmica": "Geracao_Sul_Termica_json",
+            "Eólica": "Geracao_Sul_Eolica_json",
+            "Solar": "Geracao_Sul_Solar_json",
+            "Nuclear": "Geracao_Sul_Nuclear_json"
+        }
     },
     "Carga": {
         "Carga Total": "Carga_SIN_json",
@@ -42,7 +72,7 @@ const charts = new Map();
 function createEndpointSelectors() {
     const container = document.querySelector('.endpoint-groups');
     
-    Object.entries(ENDPOINTS_ONS).forEach(([category, endpoints]) => {
+    Object.entries(ENDPOINTS_ONS).forEach(([category, content]) => {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'endpoint-group';
         
@@ -50,23 +80,56 @@ function createEndpointSelectors() {
         title.textContent = category;
         groupDiv.appendChild(title);
         
-        Object.entries(endpoints).forEach(([name, endpoint]) => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'endpoint-item';
-            
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.id = endpoint;
-            checkbox.addEventListener('change', () => handleEndpointSelection(endpoint, name, checkbox.checked));
-            
-            const label = document.createElement('label');
-            label.htmlFor = endpoint;
-            label.textContent = name;
-            
-            itemDiv.appendChild(checkbox);
-            itemDiv.appendChild(label);
-            groupDiv.appendChild(itemDiv);
-        });
+        if (category === "Geração") {
+            // Criar seleção de sistema/subsistema
+            Object.entries(content).forEach(([system, types]) => {
+                const systemDiv = document.createElement('div');
+                systemDiv.className = 'system-group';
+                
+                const systemTitle = document.createElement('h4');
+                systemTitle.textContent = system;
+                systemDiv.appendChild(systemTitle);
+                
+                Object.entries(types).forEach(([typeName, endpoint]) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'endpoint-item';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = endpoint;
+                    checkbox.addEventListener('change', () => handleEndpointSelection(endpoint, `${system} - ${typeName}`, checkbox.checked));
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = endpoint;
+                    label.textContent = typeName;
+                    
+                    itemDiv.appendChild(checkbox);
+                    itemDiv.appendChild(label);
+                    systemDiv.appendChild(itemDiv);
+                });
+                
+                groupDiv.appendChild(systemDiv);
+            });
+        } else {
+            // Manter o comportamento original para outras categorias
+            Object.entries(content).forEach(([name, endpoint]) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'endpoint-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = endpoint;
+                checkbox.addEventListener('change', () => handleEndpointSelection(endpoint, name, checkbox.checked));
+                
+                const label = document.createElement('label');
+                label.htmlFor = endpoint;
+                label.textContent = name;
+                
+                itemDiv.appendChild(checkbox);
+                itemDiv.appendChild(label);
+                groupDiv.appendChild(itemDiv);
+            });
+        }
         
         container.appendChild(groupDiv);
     });
