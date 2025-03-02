@@ -86,7 +86,9 @@ const GERACAO_COLORS = {
     'Solar': '#ffd700',       // Amarelo
     'Térmica': '#ff8c00',     // Laranja
     'Nuclear': '#ff0000',     // Vermelho
-    'Hidráulica': '#2ecc71'   // Verde
+    'Hidráulica': '#2ecc71',  // Verde
+    'Total': '#6c757d',       // Cinza
+    'Carga': '#000000'        // Preto
 };
 
 // Função para criar o seletor de sistema
@@ -440,10 +442,18 @@ function createOrUpdateChart(endpoint, name, data) {
         year: 'numeric'
     });
     
-    // Extrair o tipo de geração do nome
-    const tipoGeracao = name.split(' - ').pop();
-    const sistema = name.split(' - ')[0];
-    const chartId = `chart-geracao-${sistema.toLowerCase().replace(/\s+/g, '-')}`;
+    // Extrair o tipo e sistema do nome
+    const partes = name.split(' - ');
+    const sistema = partes[0];
+    const tipo = partes[partes.length - 1];
+    
+    // Determinar o ID do gráfico baseado no tipo de dado
+    let chartId;
+    if (endpoint.includes('Geracao') || endpoint.includes('Carga')) {
+        chartId = `chart-energia-${sistema.toLowerCase().replace(/\s+/g, '-')}`;
+    } else {
+        chartId = `chart-${endpoint}`;
+    }
     
     const chartsContainer = document.querySelector('.charts-container');
     let chartWrapper = document.getElementById(chartId);
@@ -456,7 +466,7 @@ function createOrUpdateChart(endpoint, name, data) {
         chartWrapper.style.height = '400px';
         
         const title = document.createElement('h3');
-        title.textContent = `Geração por Fonte - ${sistema} - ${dataFormatada}`;
+        title.textContent = `Energia - ${sistema} - ${dataFormatada}`;
         chartWrapper.appendChild(title);
         
         const canvas = document.createElement('canvas');
@@ -469,15 +479,16 @@ function createOrUpdateChart(endpoint, name, data) {
             data: {
                 labels: data.labels,
                 datasets: [{
-                    label: tipoGeracao,
+                    label: tipo,
                     data: data.values,
-                    borderColor: GERACAO_COLORS[tipoGeracao] || '#1a73e8',
+                    borderColor: GERACAO_COLORS[tipo] || '#1a73e8',
                     backgroundColor: 'transparent',
                     borderWidth: 2,
                     fill: false,
                     tension: 0.1,
                     pointRadius: 0,
-                    pointHoverRadius: 5
+                    pointHoverRadius: 5,
+                    borderDash: tipo === 'Carga' ? [5, 5] : []
                 }]
             },
             options: {
@@ -539,21 +550,27 @@ function createOrUpdateChart(endpoint, name, data) {
         const chart = charts.get(chartId);
         
         // Verificar se o dataset já existe
-        const datasetIndex = chart.data.datasets.findIndex(ds => ds.label === tipoGeracao);
+        const datasetIndex = chart.data.datasets.findIndex(ds => ds.label === tipo);
         
         if (datasetIndex === -1) {
             // Adicionar novo dataset
             chart.data.datasets.push({
-                label: tipoGeracao,
+                label: tipo,
                 data: data.values,
-                borderColor: GERACAO_COLORS[tipoGeracao] || '#1a73e8',
+                borderColor: GERACAO_COLORS[tipo] || '#1a73e8',
                 backgroundColor: 'transparent',
                 borderWidth: 2,
                 fill: false,
                 tension: 0.1,
                 pointRadius: 0,
-                pointHoverRadius: 5
+                pointHoverRadius: 5,
+                borderDash: tipo === 'Carga' ? [5, 5] : []
             });
+            
+            // Se for um tipo de geração, calcular e atualizar o total
+            if (endpoint.includes('Geracao') && tipo !== 'Total') {
+                updateGeracaoTotal(chart, sistema);
+            }
         } else {
             // Atualizar dataset existente
             chart.data.datasets[datasetIndex].data = data.values;
@@ -564,22 +581,66 @@ function createOrUpdateChart(endpoint, name, data) {
     }
 }
 
+// Função para atualizar a geração total
+function updateGeracaoTotal(chart, sistema) {
+    const datasets = chart.data.datasets;
+    const tiposGeracao = ['Hidráulica', 'Térmica', 'Eólica', 'Solar', 'Nuclear'];
+    
+    // Encontrar datasets de geração
+    const geracaoDatasets = datasets.filter(ds => tiposGeracao.includes(ds.label));
+    
+    if (geracaoDatasets.length > 0) {
+        // Calcular a soma de todas as gerações
+        const totalData = geracaoDatasets[0].data.map((_, index) => {
+            return geracaoDatasets.reduce((sum, ds) => {
+                return sum + (ds.data[index] || 0);
+            }, 0);
+        });
+        
+        // Encontrar ou criar o dataset total
+        let totalDataset = datasets.find(ds => ds.label === 'Total');
+        if (!totalDataset) {
+            totalDataset = {
+                label: 'Total',
+                data: totalData,
+                borderColor: GERACAO_COLORS['Total'],
+                backgroundColor: 'transparent',
+                borderWidth: 3,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            };
+            datasets.push(totalDataset);
+        } else {
+            totalDataset.data = totalData;
+        }
+    }
+}
+
 // Função para remover um gráfico
 function removeChart(endpoint) {
-    const name = endpoint.includes('Geracao') ? 'geracao' : endpoint;
-    const sistema = endpoint.split('_')[1];
-    const chartId = `chart-${name}-${sistema.toLowerCase()}`;
+    const partes = endpoint.split('_');
+    const sistema = partes[1];
+    const chartId = `chart-energia-${sistema.toLowerCase()}`;
     
     const chartWrapper = document.getElementById(chartId);
     if (chartWrapper) {
         const chart = charts.get(chartId);
         if (chart) {
-            // Se for um gráfico de geração, remover apenas o dataset específico
-            if (endpoint.includes('Geracao')) {
-                const tipoGeracao = endpoint.split('_')[3].replace('_json', '');
-                const datasetIndex = chart.data.datasets.findIndex(ds => ds.label === tipoGeracao);
+            // Se for um gráfico de geração ou carga, remover apenas o dataset específico
+            if (endpoint.includes('Geracao') || endpoint.includes('Carga')) {
+                const tipo = endpoint.includes('Carga') ? 'Carga' : endpoint.split('_')[3].replace('_json', '');
+                const datasetIndex = chart.data.datasets.findIndex(ds => ds.label === tipo);
+                
                 if (datasetIndex !== -1) {
                     chart.data.datasets.splice(datasetIndex, 1);
+                    
+                    // Se for geração, atualizar o total
+                    if (endpoint.includes('Geracao')) {
+                        updateGeracaoTotal(chart, sistema);
+                    }
+                    
                     if (chart.data.datasets.length === 0) {
                         chart.destroy();
                         charts.delete(chartId);
