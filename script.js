@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.19";
+const DASHBOARD_VERSION = "1.0.20";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
@@ -21,7 +21,6 @@ const ENDPOINTS_ONS = {
     },
     "Geração": {
         "SIN": {
-            "Total": "Geracao_SIN_Total_json",
             "Hidráulica": "Geracao_SIN_Hidraulica_json",
             "Térmica": "Geracao_SIN_Termica_json",
             "Eólica": "Geracao_SIN_Eolica_json",
@@ -209,6 +208,25 @@ function createEndpointGroup(category, endpoints, system) {
     const title = document.createElement('h3');
     title.textContent = category;
     groupDiv.appendChild(title);
+    
+    // Adicionar checkbox para Total apenas para Geração
+    if (category === "Geração") {
+        const totalDiv = document.createElement('div');
+        totalDiv.className = 'endpoint-item';
+        
+        const totalCheckbox = document.createElement('input');
+        totalCheckbox.type = 'checkbox';
+        totalCheckbox.id = `total-${system}`;
+        totalCheckbox.addEventListener('change', () => handleTotalSelection(system, totalCheckbox.checked));
+        
+        const totalLabel = document.createElement('label');
+        totalLabel.htmlFor = `total-${system}`;
+        totalLabel.textContent = 'Total';
+        
+        totalDiv.appendChild(totalCheckbox);
+        totalDiv.appendChild(totalLabel);
+        groupDiv.appendChild(totalDiv);
+    }
     
     Object.entries(endpoints).forEach(([name, endpoint]) => {
         const itemDiv = document.createElement('div');
@@ -617,9 +635,11 @@ function updateGeracaoTotal(chart, sistema) {
     if (geracaoDatasets.length > 0) {
         // Calcular a soma de todas as gerações
         const totalData = geracaoDatasets[0].data.map((_, index) => {
-            return geracaoDatasets.reduce((sum, ds) => {
-                return sum + (ds.data[index] || 0);
+            const sum = geracaoDatasets.reduce((acc, ds) => {
+                const value = ds.data[index];
+                return acc + (value || 0);
             }, 0);
+            return sum > 0 ? sum : null;
         });
         
         // Encontrar ou criar o dataset total
@@ -634,11 +654,51 @@ function updateGeracaoTotal(chart, sistema) {
                 fill: false,
                 tension: 0.1,
                 pointRadius: 0,
-                pointHoverRadius: 5
+                pointHoverRadius: 5,
+                spanGaps: true
             };
             datasets.push(totalDataset);
         } else {
             totalDataset.data = totalData;
+        }
+        
+        chart.update();
+    }
+}
+
+// Função para lidar com a seleção de endpoints
+async function handleEndpointSelection(endpoint, name, isSelected) {
+    if (isSelected) {
+        const data = await fetchONSData(endpoint);
+        if (data) {
+            const processedData = processData(data);
+            createOrUpdateChart(endpoint, name, processedData);
+        }
+    } else {
+        removeChart(endpoint);
+    }
+}
+
+// Função para lidar com a seleção do Total
+function handleTotalSelection(system, isSelected) {
+    const chartId = `chart-energia-${system.toLowerCase().replace(/\s+/g, '-')}`;
+    const chart = charts.get(chartId);
+    
+    if (!chart) return;
+    
+    // Encontrar o dataset do Total
+    const totalDatasetIndex = chart.data.datasets.findIndex(ds => ds.label === 'Total');
+    
+    if (isSelected) {
+        // Se não existe dataset do Total, criar um novo
+        if (totalDatasetIndex === -1) {
+            updateGeracaoTotal(chart, system);
+        }
+    } else {
+        // Se existe dataset do Total, remover
+        if (totalDatasetIndex !== -1) {
+            chart.data.datasets.splice(totalDatasetIndex, 1);
+            chart.update();
         }
     }
 }
@@ -678,9 +738,12 @@ function removeChart(endpoint) {
             // Remover o dataset
             chart.data.datasets.splice(datasetIndex, 1);
             
-            // Se for geração, atualizar o total
+            // Se for geração, atualizar o total se estiver visível
             if (endpoint.includes('Geracao')) {
-                updateGeracaoTotal(chart, sistema);
+                const totalCheckbox = document.getElementById(`total-${sistema}`);
+                if (totalCheckbox && totalCheckbox.checked) {
+                    updateGeracaoTotal(chart, sistema);
+                }
             }
             
             // Se não houver mais datasets, remover o gráfico
@@ -691,7 +754,7 @@ function removeChart(endpoint) {
                 chartWrapper.remove();
             } else {
                 console.log('Atualizando gráfico após remoção do dataset');
-                chart.update('none'); // Usar 'none' para atualização mais rápida
+                chart.update();
             }
         }
     } else {
@@ -700,19 +763,6 @@ function removeChart(endpoint) {
         chart.destroy();
         charts.delete(chartId);
         chartWrapper.remove();
-    }
-}
-
-// Função para lidar com a seleção de endpoints
-async function handleEndpointSelection(endpoint, name, isSelected) {
-    if (isSelected) {
-        const data = await fetchONSData(endpoint);
-        if (data) {
-            const processedData = processData(data);
-            createOrUpdateChart(endpoint, name, processedData);
-        }
-    } else {
-        removeChart(endpoint);
     }
 }
 
