@@ -1,12 +1,24 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.13";
+const DASHBOARD_VERSION = "1.0.14";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos em milissegundos
 
+// Configuração dos sistemas disponíveis
+const SISTEMAS = {
+    "SIN": "Sistema Interligado Nacional",
+    "Norte": "Subsistema Norte",
+    "Nordeste": "Subsistema Nordeste",
+    "SudesteECentroOeste": "Subsistema Sudeste/Centro-Oeste",
+    "Sul": "Subsistema Sul"
+};
+
 // Configuração dos endpoints disponíveis
 const ENDPOINTS_ONS = {
+    "Balanço": {
+        "Consolidado": "BalancoEnergeticoConsolidado/null"
+    },
     "Geração": {
         "SIN": {
             "Total": "Geracao_SIN_Total_json",
@@ -30,7 +42,7 @@ const ENDPOINTS_ONS = {
             "Solar": "Geracao_Nordeste_Solar_json",
             "Nuclear": "Geracao_Nordeste_Nuclear_json"
         },
-        "Sudeste/Centro-Oeste": {
+        "SudesteECentroOeste": {
             "Hidráulica": "Geracao_SudesteECentroOeste_Hidraulica_json",
             "Térmica": "Geracao_SudesteECentroOeste_Termica_json",
             "Eólica": "Geracao_SudesteECentroOeste_Eolica_json",
@@ -46,11 +58,11 @@ const ENDPOINTS_ONS = {
         }
     },
     "Carga": {
-        "Carga Total": "Carga_SIN_json",
-        "Carga Norte": "Carga_Norte_json",
-        "Carga Nordeste": "Carga_Nordeste_json",
-        "Carga Sudeste/Centro-Oeste": "Carga_SudesteECentroOeste_json",
-        "Carga Sul": "Carga_Sul_json"
+        "SIN": "Carga_SIN_json",
+        "Norte": "Carga_Norte_json",
+        "Nordeste": "Carga_Nordeste_json",
+        "SudesteECentroOeste": "Carga_SudesteECentroOeste_json",
+        "Sul": "Carga_Sul_json"
     },
     "Intercâmbio": {
         "Entre Regiões": "Intercambio_Regioes_json"
@@ -483,6 +495,116 @@ async function handleEndpointSelection(endpoint, name, isSelected) {
     }
 }
 
+// Função para criar o seletor de sistema
+function createSystemSelector() {
+    const container = document.querySelector('.controls');
+    const selectorDiv = document.createElement('div');
+    selectorDiv.className = 'system-selector';
+    
+    const label = document.createElement('label');
+    label.htmlFor = 'system-select';
+    label.textContent = 'Selecione o Sistema/Região: ';
+    
+    const select = document.createElement('select');
+    select.id = 'system-select';
+    
+    Object.entries(SISTEMAS).forEach(([value, text]) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = text;
+        select.appendChild(option);
+    });
+    
+    select.addEventListener('change', handleSystemChange);
+    
+    selectorDiv.appendChild(label);
+    selectorDiv.appendChild(select);
+    container.insertBefore(selectorDiv, container.firstChild);
+}
+
+// Função para lidar com a mudança de sistema
+async function handleSystemChange(event) {
+    const selectedSystem = event.target.value;
+    
+    // Limpar todos os gráficos existentes
+    const chartsContainer = document.querySelector('.charts-container');
+    chartsContainer.innerHTML = '';
+    charts.clear();
+    
+    // Desmarcar todos os checkboxes
+    document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    // Buscar balanço energético
+    const balanco = await fetchONSData(ENDPOINTS_ONS.Balanço.Consolidado);
+    if (balanco) {
+        createBalancoTable(balanco, selectedSystem);
+    }
+    
+    // Atualizar visibilidade dos endpoints baseado no sistema selecionado
+    updateEndpointVisibility(selectedSystem);
+}
+
+// Função para criar tabela do balanço energético
+function createBalancoTable(data, sistema) {
+    const container = document.querySelector('.charts-container');
+    
+    // Criar div para a tabela
+    const tableDiv = document.createElement('div');
+    tableDiv.className = 'balanco-table';
+    
+    // Criar título
+    const title = document.createElement('h3');
+    title.textContent = `Balanço Energético - ${SISTEMAS[sistema]}`;
+    tableDiv.appendChild(title);
+    
+    // Criar tabela
+    const table = document.createElement('table');
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Valor (MW)</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${createBalancoRows(data, sistema)}
+        </tbody>
+    `;
+    
+    tableDiv.appendChild(table);
+    container.insertBefore(tableDiv, container.firstChild);
+}
+
+// Função para criar linhas da tabela de balanço
+function createBalancoRows(data, sistema) {
+    // Aqui você vai processar os dados do balanço e retornar as linhas HTML
+    // Este é um exemplo, ajuste conforme a estrutura real dos dados
+    return `
+        <tr>
+            <td>Geração Total</td>
+            <td>${formatNumber(data.geracaoTotal || 0)}</td>
+        </tr>
+        <tr>
+            <td>Carga</td>
+            <td>${formatNumber(data.carga || 0)}</td>
+        </tr>
+    `;
+}
+
+// Função para atualizar visibilidade dos endpoints
+function updateEndpointVisibility(selectedSystem) {
+    document.querySelectorAll('.system-group').forEach(group => {
+        const systemName = group.querySelector('h4').textContent;
+        if (systemName === selectedSystem || selectedSystem === 'SIN') {
+            group.style.display = 'block';
+        } else {
+            group.style.display = 'none';
+        }
+    });
+}
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     // Adicionar versão no topo da página
@@ -492,5 +614,16 @@ document.addEventListener('DOMContentLoaded', () => {
     versionDiv.textContent = `Versão ${DASHBOARD_VERSION}`;
     header.appendChild(versionDiv);
     
+    // Criar seletor de sistema
+    createSystemSelector();
+    
+    // Criar seletores de endpoint
     createEndpointSelectors();
+    
+    // Iniciar com SIN selecionado
+    const systemSelect = document.getElementById('system-select');
+    if (systemSelect) {
+        systemSelect.value = 'SIN';
+        systemSelect.dispatchEvent(new Event('change'));
+    }
 }); 
