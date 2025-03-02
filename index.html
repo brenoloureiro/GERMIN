@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carga e Geração - ONS</title>
+    <title>Dashboard ONS - Energia Agora</title>
     <link rel="stylesheet" href="styles.css">
     <!-- Chart.js para criar os gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -11,41 +11,22 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
-    <div class="last-update">
-        ÚLTIMA ATUALIZAÇÃO: <span id="ultima-atualizacao"></span>
-    </div>
+    <header>
+        <h1>Dashboard ONS - Energia Agora</h1>
+    </header>
 
     <main>
-        <div class="main-section">
-            <h2>Curva de Carga (MW)</h2>
-            
-            <div class="system-selector">
-                <label>Selecione o subsistema:</label>
-                <select id="system-select"></select>
-            </div>
-
-            <div class="main-chart-container">
-                <div class="main-chart"></div>
-                <div class="info-table"></div>
-            </div>
-
-            <div class="observation">
-                *Arredondamento de valores pode causar diferenças de até 1 MW
+        <div class="controls">
+            <div class="endpoint-selector">
+                <h2>Selecione os dados para visualizar:</h2>
+                <div class="endpoint-groups">
+                    <!-- Os grupos de endpoints serão inseridos aqui via JavaScript -->
+                </div>
             </div>
         </div>
 
-        <div class="charts-section">
-            <h2>Valores acumulados no dia em MWmed até: <span id="hora-acumulado"></span></h2>
-            <div class="charts-container"></div>
-        </div>
-
-        <div class="generation-section">
-            <h2>Curva de Geração (MW)</h2>
-            <div class="generation-selector">
-                <label>Selecione o tipo:</label>
-                <select id="generation-select"></select>
-            </div>
-            <div id="generation-chart"></div>
+        <div class="charts-container">
+            <!-- Os gráficos serão inseridos aqui via JavaScript -->
         </div>
     </main>
 

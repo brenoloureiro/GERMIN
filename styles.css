@@ -7,176 +7,175 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
-    background-color: #fff;
+    background-color: #f5f5f5;
     color: #333;
-    padding: 20px;
 }
 
 header {
-    background-color: #004a8f;
+    background-color: #1a73e8;
     color: white;
     padding: 1rem;
     text-align: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-header h1 {
-    font-size: 1.5rem;
-    font-weight: 600;
-}
-
 .version-info {
-    font-size: 0.8rem;
+    font-size: 1rem;
     margin-top: 0.5rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: white;
     font-family: monospace;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
 }
 
 main {
-    max-width: 1400px;
-    margin: 0 auto;
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
 }
 
-h2 {
-    color: #333;
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
-    font-weight: 500;
-}
-
-.main-section {
+.controls {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-bottom: 2rem;
 }
 
-.system-selector {
+.endpoint-selector h2 {
     margin-bottom: 1rem;
+    color: #1a73e8;
 }
 
-.system-selector label {
-    margin-right: 0.5rem;
-}
-
-.system-selector select {
-    padding: 0.25rem 1rem;
-    border: 1px solid #ccc;
-    border-radius: 2px;
-    min-width: 200px;
-}
-
-.main-chart-container {
+.endpoint-groups {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
-    margin-bottom: 1rem;
 }
 
-.main-chart {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    padding: 1rem;
-    height: 400px;
-}
-
-.info-table {
+.endpoint-group {
     background-color: #f8f9fa;
     padding: 1rem;
-    border: 1px solid #ddd;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
 }
 
-.info-table table {
-    width: 100%;
-    border-collapse: collapse;
+.endpoint-group h3 {
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
 }
 
-.info-table td {
-    padding: 0.5rem;
-    border-bottom: 1px solid #eee;
-    font-size: 0.9rem;
+.endpoint-item {
+    display: flex;
+    align-items: center;
+    margin: 0.5rem 0;
 }
 
-.info-table td:first-child {
-    color: #0066cc;
-}
-
-.info-table td:last-child {
-    text-align: right;
-    font-family: monospace;
-}
-
-.observation {
-    color: #666;
-    font-size: 0.8rem;
-    margin-top: 0.5rem;
-}
-
-.charts-section {
-    margin-bottom: 2rem;
+.endpoint-item label {
+    margin-left: 0.5rem;
+    cursor: pointer;
 }
 
 .charts-container {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
 }
 
 .chart-wrapper {
-    background-color: #fff;
-    border: 1px solid #ddd;
+    background-color: white;
     padding: 1rem;
-    height: 300px;
-}
-
-.generation-section {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    height: 400px;
     margin-bottom: 2rem;
 }
 
-.generation-selector {
+.chart-wrapper canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.chart-wrapper h3 {
+    text-align: center;
     margin-bottom: 1rem;
-}
-
-.generation-selector label {
-    margin-right: 0.5rem;
-}
-
-.generation-selector select {
-    padding: 0.25rem 1rem;
-    border: 1px solid #ccc;
-    border-radius: 2px;
-    min-width: 200px;
-}
-
-#generation-chart {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    padding: 1rem;
-    height: 400px;
+    color: #2c3e50;
 }
 
 footer {
-    background-color: #004a8f;
-    color: rgba(255, 255, 255, 0.8);
-    padding: 0.75rem;
     text-align: center;
-    font-size: 0.8rem;
+    padding: 1rem;
+    background-color: #1a73e8;
+    color: white;
+    position: relative;
+    bottom: 0;
+    width: 100%;
+    margin-top: 2rem;
+}
+
+.system-group {
+    background-color: #f0f4f8;
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+    border-radius: 4px;
+    border: 1px solid #e0e0e0;
+}
+
+.system-group h4 {
+    color: #1a73e8;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.system-group .endpoint-item {
+    margin-left: 1rem;
 }
 
 @media (max-width: 768px) {
-    .main-chart-container {
+    .endpoint-groups {
         grid-template-columns: 1fr;
     }
-    
+
     .charts-container {
         grid-template-columns: 1fr;
     }
-    
-    .system-selector select,
-    .generation-selector select {
-        width: 100%;
-        margin-top: 0.5rem;
-    }
 }
 
-.balanco-table {
+.system-selector {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: #f0f4f8;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.system-selector label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #1a73e8;
+    font-weight: 600;
+}
+
+.system-selector select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 1rem;
+    color: #2c3e50;
+    background-color: white;
+}
+
+.system-selector select:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+}
+
+.table-wrapper {
     background-color: white;
     padding: 1rem;
     border-radius: 8px;
@@ -185,13 +184,7 @@ footer {
     overflow-x: auto;
 }
 
-.balanco-table h3 {
-    color: #2c3e50;
-    margin-bottom: 1rem;
-    text-align: center;
-}
-
-.balanco-table table {
+.balanco-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 1rem;
@@ -210,34 +203,10 @@ footer {
     color: #2c3e50;
 }
 
+.balanco-table td {
+    color: #333;
+}
+
 .balanco-table tr:hover {
-    background-color: #f8f9fa;
-}
-
-.balanco-table td:last-child {
-    text-align: right;
-    font-family: monospace;
-    font-size: 1.1rem;
-}
-
-.info-table {
-    background-color: #f8f9fa;
-    padding: 1rem;
-    border-radius: 4px;
-    border: 1px solid #e0e0e0;
-}
-
-.info-table table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.info-table td:last-child {
-    text-align: right;
-    font-family: monospace;
-    color: #1a73e8;
-}
-
-.info-table tr:hover {
-    background-color: rgba(26, 115, 232, 0.05);
+    background-color: #f5f9ff;
 } 

@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.16";
+const DASHBOARD_VERSION = "1.0.14";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
@@ -80,71 +80,137 @@ const CORS_PROXY = "https://cors-anywhere.herokuapp.com/";
 // Objeto para armazenar as instâncias dos gráficos
 const charts = new Map();
 
-// Função para criar os elementos de seleção de endpoints
-function createEndpointSelectors() {
+// Função para criar o seletor de sistema
+function createSystemSelector() {
+    const container = document.querySelector('.controls');
+    const selectorDiv = document.createElement('div');
+    selectorDiv.className = 'system-selector';
+    
+    const label = document.createElement('label');
+    label.htmlFor = 'system-select';
+    label.textContent = 'Selecione o Sistema/Subsistema:';
+    
+    const select = document.createElement('select');
+    select.id = 'system-select';
+    
+    Object.entries(SISTEMAS).forEach(([key, value]) => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = value;
+        select.appendChild(option);
+    });
+    
+    select.addEventListener('change', handleSystemChange);
+    
+    selectorDiv.appendChild(label);
+    selectorDiv.appendChild(select);
+    container.insertBefore(selectorDiv, container.firstChild);
+}
+
+// Função para lidar com a mudança de sistema
+async function handleSystemChange(event) {
+    const selectedSystem = event.target.value;
+    
+    // Limpar todos os gráficos existentes
+    const chartsContainer = document.querySelector('.charts-container');
+    chartsContainer.innerHTML = '';
+    charts.clear();
+    
+    // Buscar balanço energético
+    const balanco = await fetchONSData('BalancoEnergeticoConsolidado/null');
+    if (balanco) {
+        createBalancoTable(balanco, selectedSystem);
+    }
+    
+    // Atualizar os checkboxes disponíveis
+    updateEndpointSelectors(selectedSystem);
+}
+
+// Função para criar a tabela de balanço energético
+function createBalancoTable(data, sistema) {
+    const container = document.querySelector('.charts-container');
+    
+    const tableWrapper = document.createElement('div');
+    tableWrapper.className = 'table-wrapper';
+    
+    const title = document.createElement('h3');
+    title.textContent = `Balanço Energético - ${SISTEMAS[sistema]}`;
+    
+    const table = document.createElement('table');
+    table.className = 'balanco-table';
+    
+    // Cabeçalho
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    ['Tipo', 'Valor (MW)'].forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    
+    // Corpo
+    const tbody = document.createElement('tbody');
+    // Aqui você vai precisar processar os dados do balanço conforme a estrutura retornada pela API
+    
+    table.appendChild(tbody);
+    tableWrapper.appendChild(title);
+    tableWrapper.appendChild(table);
+    container.insertBefore(tableWrapper, container.firstChild);
+}
+
+// Função para atualizar os seletores de endpoint baseado no sistema selecionado
+function updateEndpointSelectors(selectedSystem) {
+    const container = document.querySelector('.endpoint-groups');
+    container.innerHTML = '';
+    
+    // Recriar os seletores apenas para o sistema selecionado
+    Object.entries(ENDPOINTS_ONS).forEach(([category, content]) => {
+        if (category === "Geração") {
+            const endpoints = content[selectedSystem];
+            if (endpoints) {
+                createEndpointGroup(category, endpoints, selectedSystem);
+            }
+        } else if (category === "Carga") {
+            const endpoint = content[selectedSystem];
+            if (endpoint) {
+                createEndpointGroup(category, { [`Carga ${selectedSystem}`]: endpoint }, selectedSystem);
+            }
+        }
+    });
+}
+
+// Função para criar um grupo de endpoints
+function createEndpointGroup(category, endpoints, system) {
     const container = document.querySelector('.endpoint-groups');
     
-    Object.entries(ENDPOINTS_ONS).forEach(([category, content]) => {
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'endpoint-group';
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'endpoint-group';
+    
+    const title = document.createElement('h3');
+    title.textContent = category;
+    groupDiv.appendChild(title);
+    
+    Object.entries(endpoints).forEach(([name, endpoint]) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'endpoint-item';
         
-        const title = document.createElement('h3');
-        title.textContent = category;
-        groupDiv.appendChild(title);
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = endpoint;
+        checkbox.addEventListener('change', () => handleEndpointSelection(endpoint, `${system} - ${name}`, checkbox.checked));
         
-        if (category === "Geração") {
-            // Criar seleção de sistema/subsistema
-            Object.entries(content).forEach(([system, types]) => {
-                const systemDiv = document.createElement('div');
-                systemDiv.className = 'system-group';
-                
-                const systemTitle = document.createElement('h4');
-                systemTitle.textContent = system;
-                systemDiv.appendChild(systemTitle);
-                
-                Object.entries(types).forEach(([typeName, endpoint]) => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'endpoint-item';
-                    
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.id = endpoint;
-                    checkbox.addEventListener('change', () => handleEndpointSelection(endpoint, `${system} - ${typeName}`, checkbox.checked));
-                    
-                    const label = document.createElement('label');
-                    label.htmlFor = endpoint;
-                    label.textContent = typeName;
-                    
-                    itemDiv.appendChild(checkbox);
-                    itemDiv.appendChild(label);
-                    systemDiv.appendChild(itemDiv);
-                });
-                
-                groupDiv.appendChild(systemDiv);
-            });
-        } else {
-            // Manter o comportamento original para outras categorias
-            Object.entries(content).forEach(([name, endpoint]) => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'endpoint-item';
-                
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = endpoint;
-                checkbox.addEventListener('change', () => handleEndpointSelection(endpoint, name, checkbox.checked));
-                
-                const label = document.createElement('label');
-                label.htmlFor = endpoint;
-                label.textContent = name;
-                
-                itemDiv.appendChild(checkbox);
-                itemDiv.appendChild(label);
-                groupDiv.appendChild(itemDiv);
-            });
-        }
+        const label = document.createElement('label');
+        label.htmlFor = endpoint;
+        label.textContent = name;
         
-        container.appendChild(groupDiv);
+        itemDiv.appendChild(checkbox);
+        itemDiv.appendChild(label);
+        groupDiv.appendChild(itemDiv);
     });
+    
+    container.appendChild(groupDiv);
 }
 
 // Função para fazer requisição à API
@@ -495,233 +561,6 @@ async function handleEndpointSelection(endpoint, name, isSelected) {
     }
 }
 
-// Função para criar o seletor de sistema
-function createSystemSelector() {
-    const container = document.querySelector('.controls');
-    const selectorDiv = document.createElement('div');
-    selectorDiv.className = 'system-selector';
-    
-    const label = document.createElement('label');
-    label.htmlFor = 'system-select';
-    label.textContent = 'Selecione o Sistema/Região: ';
-    
-    const select = document.createElement('select');
-    select.id = 'system-select';
-    
-    Object.entries(SISTEMAS).forEach(([value, text]) => {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = text;
-        select.appendChild(option);
-    });
-    
-    select.addEventListener('change', handleSystemChange);
-    
-    selectorDiv.appendChild(label);
-    selectorDiv.appendChild(select);
-    container.insertBefore(selectorDiv, container.firstChild);
-}
-
-// Função para criar tabela do balanço energético
-function createBalancoTable(data, sistema) {
-    const container = document.querySelector('.charts-container');
-    
-    // Criar container principal
-    const mainContainer = document.createElement('div');
-    mainContainer.className = 'main-chart-container';
-    
-    // Criar div para o gráfico principal
-    const chartDiv = document.createElement('div');
-    chartDiv.className = 'main-chart';
-    
-    // Criar canvas para o gráfico
-    const canvas = document.createElement('canvas');
-    chartDiv.appendChild(canvas);
-    
-    // Criar div para a tabela de informações
-    const tableDiv = document.createElement('div');
-    tableDiv.className = 'info-table';
-    
-    // Criar elemento para última atualização
-    const lastUpdate = document.createElement('div');
-    lastUpdate.className = 'last-update';
-    const now = new Date();
-    lastUpdate.textContent = `Última Atualização: ${now.toLocaleString('pt-BR')}`;
-    tableDiv.appendChild(lastUpdate);
-    
-    // Criar tabela
-    const table = document.createElement('table');
-    table.innerHTML = `
-        <tbody>
-            <tr>
-                <td>Carga:</td>
-                <td>${formatNumber(data.carga)} MW</td>
-            </tr>
-            <tr>
-                <td>Exportação:</td>
-                <td>${formatNumber(data.exportacao)} MW</td>
-            </tr>
-            <tr>
-                <td>Ger. Eólica:</td>
-                <td>${formatNumber(data.geracaoEolica)} MW</td>
-            </tr>
-            <tr>
-                <td>Ger. Hidráulica:</td>
-                <td>${formatNumber(data.geracaoHidraulica)} MW</td>
-            </tr>
-            <tr>
-                <td>Ger. Térmica:</td>
-                <td>${formatNumber(data.geracaoTermica)} MW</td>
-            </tr>
-            <tr>
-                <td>Ger. Nuclear:</td>
-                <td>${formatNumber(data.geracaoNuclear)} MW</td>
-            </tr>
-            <tr>
-                <td>Ger. Solar:</td>
-                <td>${formatNumber(data.geracaoSolar)} MW</td>
-            </tr>
-            <tr>
-                <td>Importação:</td>
-                <td>${formatNumber(data.importacao)} MW</td>
-            </tr>
-        </tbody>
-    `;
-    
-    tableDiv.appendChild(table);
-    
-    // Adicionar elementos ao container principal
-    mainContainer.appendChild(chartDiv);
-    mainContainer.appendChild(tableDiv);
-    
-    // Adicionar container principal ao início do container de gráficos
-    container.insertBefore(mainContainer, container.firstChild);
-    
-    // Criar gráfico de carga
-    const ctx = canvas.getContext('2d');
-    const cargaChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Carga',
-                data: [],
-                borderColor: '#1a73e8',
-                backgroundColor: 'rgba(26, 115, 232, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.1,
-                pointRadius: 0,
-                pointHoverRadius: 5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: true,
-                    text: 'Curva de Carga (MW)'
-                },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    callbacks: {
-                        label: function(context) {
-                            return `Carga: ${formatNumber(context.parsed.y)} MW`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    title: {
-                        display: true,
-                        text: 'MW'
-                    },
-                    ticks: {
-                        callback: function(value) {
-                            return formatNumber(value);
-                        }
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Hora'
-                    },
-                    ticks: {
-                        maxRotation: 45,
-                        minRotation: 45
-                    }
-                }
-            }
-        }
-    });
-    
-    // Armazenar referência do gráfico
-    charts.set('carga-principal', cargaChart);
-    
-    // Carregar dados de carga
-    fetchONSData(ENDPOINTS_ONS.Carga.SIN).then(data => {
-        if (data) {
-            const processedData = processData(data);
-            cargaChart.data.labels = processedData.labels;
-            cargaChart.data.datasets[0].data = processedData.values;
-            cargaChart.update();
-        }
-    });
-}
-
-// Função para lidar com a mudança de sistema
-async function handleSystemChange(event) {
-    const selectedSystem = event.target.value;
-    
-    // Limpar todos os gráficos existentes
-    const chartsContainer = document.querySelector('.charts-container');
-    chartsContainer.innerHTML = '';
-    charts.clear();
-    
-    // Desmarcar todos os checkboxes
-    document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    
-    try {
-        // Buscar balanço energético com a URL correta
-        const response = await axios.get(`${CORS_PROXY}https://integra.ons.org.br/api/energiaagora/GetBalancoEnergeticoConsolidado/null`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        
-        if (response.data) {
-            createBalancoTable(response.data, selectedSystem);
-        }
-    } catch (error) {
-        console.error('Erro ao buscar balanço energético:', error);
-    }
-    
-    // Atualizar visibilidade dos endpoints baseado no sistema selecionado
-    updateEndpointVisibility(selectedSystem);
-}
-
-// Função para atualizar visibilidade dos endpoints
-function updateEndpointVisibility(selectedSystem) {
-    document.querySelectorAll('.system-group').forEach(group => {
-        const systemName = group.querySelector('h4').textContent;
-        if (systemName === selectedSystem || selectedSystem === 'SIN') {
-            group.style.display = 'block';
-        } else {
-            group.style.display = 'none';
-        }
-    });
-}
-
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     // Adicionar versão no topo da página
@@ -734,13 +573,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Criar seletor de sistema
     createSystemSelector();
     
-    // Criar seletores de endpoint
-    createEndpointSelectors();
-    
-    // Iniciar com SIN selecionado
-    const systemSelect = document.getElementById('system-select');
-    if (systemSelect) {
-        systemSelect.value = 'SIN';
-        systemSelect.dispatchEvent(new Event('change'));
-    }
+    // Inicializar com o SIN selecionado
+    updateEndpointSelectors('SIN');
 }); 
