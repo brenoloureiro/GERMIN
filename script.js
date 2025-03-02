@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.15";
+const DASHBOARD_VERSION = "1.0.16";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
@@ -309,9 +309,26 @@ async function fetchONSData(endpoint) {
             const cachedData = API_CACHE.get(endpoint);
             if (cachedData) {
                 console.log('⚠️ Usando dados do cache expirado devido ao limite de requisições');
+                alert(`Limite de requisições atingido. Usando dados em cache para ${endpoint}.`);
                 return cachedData.data;
             }
-            alert('Limite de requisições atingido. Por favor, visite https://cors-anywhere.herokuapp.com/corsdemo e solicite acesso temporário.');
+            
+            const mensagemErro = `
+                Limite de requisições atingido para ${endpoint}.
+                
+                Para continuar usando o dashboard:
+                
+                1. Clique aqui para solicitar acesso temporário ao proxy CORS:
+                   https://cors-anywhere.herokuapp.com/corsdemo
+                
+                2. Clique no botão "Request temporary access to the demo server"
+                
+                3. Volte para esta página e recarregue
+                
+                Este processo é necessário devido às restrições de CORS da API do ONS.
+            `;
+            
+            alert(mensagemErro);
         } else if (error.response && error.response.status === 404) {
             alert(`Endpoint ${endpoint} não está disponível no momento. Tente novamente mais tarde.`);
         } else {

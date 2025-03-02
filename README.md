@@ -1,6 +1,6 @@
 # Dashboard ONS - Energia Agora
 
-*Versão atual: 1.0.15*
+*Versão atual: 1.0.16*
 
 Este é um dashboard web que exibe dados em tempo real do Sistema Interligado Nacional (SIN) através da API do ONS (Operador Nacional do Sistema Elétrico).
 
@@ -12,6 +12,7 @@ Este é um dashboard web que exibe dados em tempo real do Sistema Interligado Na
 - Estado dos reservatórios
 - Gráficos interativos e responsivos
 - Seleção dinâmica dos dados a serem exibidos
+- Cache local para reduzir requisições à API
 
 ## Como usar
 
@@ -26,15 +27,24 @@ git clone [URL_DO_SEU_REPOSITÓRIO]
    - Selecione a pasta raiz (/) como fonte
    - Salve as configurações
 
-3. Acesse a página:
+3. Solicite acesso ao proxy CORS:
+   - Visite https://cors-anywhere.herokuapp.com/corsdemo
+   - Clique no botão "Request temporary access to the demo server"
+   - Este passo é necessário devido às restrições de CORS da API do ONS
+
+4. Acesse a página:
    - Após a configuração, o GitHub fornecerá uma URL no formato: `https://[seu-usuario].github.io/[nome-do-repositorio]`
    - Aguarde alguns minutos para que o GitHub Pages processe e publique sua página
 
 ## Notas importantes
 
-- A API do ONS pode ter restrições de CORS. Para contornar isso, estamos usando um proxy CORS (cors-anywhere.herokuapp.com)
-- Para usar o proxy em produção, você precisará solicitar acesso temporário visitando: https://cors-anywhere.herokuapp.com/corsdemo
-- Recomenda-se implementar seu próprio servidor proxy para uso em produção
+- A API do ONS tem restrições de CORS, por isso usamos um proxy (cors-anywhere.herokuapp.com)
+- O proxy tem limite de requisições. Se você receber um erro 429 (Too Many Requests):
+  1. Visite https://cors-anywhere.herokuapp.com/corsdemo
+  2. Clique em "Request temporary access to the demo server"
+  3. Volte para o dashboard e recarregue a página
+- O dashboard usa cache local para reduzir o número de requisições
+- Para uso em produção, recomenda-se implementar seu próprio servidor proxy
 
 ## Tecnologias utilizadas
 
