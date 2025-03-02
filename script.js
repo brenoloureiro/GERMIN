@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.14";
+const DASHBOARD_VERSION = "1.0.15";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
