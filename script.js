@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.11";
+const DASHBOARD_VERSION = "1.0.12";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
@@ -282,6 +282,15 @@ function createOrUpdateChart(endpoint, name, data) {
     const maxValue = Math.max(...data.values);
     console.log('Range de valores para o gráfico:', { minValue, maxValue });
     
+    // Formatar a data atual
+    const hoje = new Date();
+    const dataFormatada = hoje.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+    const tituloCompleto = `${name} - ${dataFormatada}`;
+    
     const chartsContainer = document.querySelector('.charts-container');
     let chartWrapper = document.getElementById(`chart-${endpoint}`);
     
@@ -293,7 +302,7 @@ function createOrUpdateChart(endpoint, name, data) {
         chartWrapper.style.height = '400px';
         
         const title = document.createElement('h3');
-        title.textContent = name;
+        title.textContent = tituloCompleto;
         chartWrapper.appendChild(title);
         
         const canvas = document.createElement('canvas');
