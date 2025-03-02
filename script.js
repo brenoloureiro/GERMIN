@@ -522,6 +522,161 @@ function createSystemSelector() {
     container.insertBefore(selectorDiv, container.firstChild);
 }
 
+// Função para criar tabela do balanço energético
+function createBalancoTable(data, sistema) {
+    const container = document.querySelector('.charts-container');
+    
+    // Criar container principal
+    const mainContainer = document.createElement('div');
+    mainContainer.className = 'main-chart-container';
+    
+    // Criar div para o gráfico principal
+    const chartDiv = document.createElement('div');
+    chartDiv.className = 'main-chart';
+    
+    // Criar canvas para o gráfico
+    const canvas = document.createElement('canvas');
+    chartDiv.appendChild(canvas);
+    
+    // Criar div para a tabela de informações
+    const tableDiv = document.createElement('div');
+    tableDiv.className = 'info-table';
+    
+    // Criar elemento para última atualização
+    const lastUpdate = document.createElement('div');
+    lastUpdate.className = 'last-update';
+    const now = new Date();
+    lastUpdate.textContent = `Última Atualização: ${now.toLocaleString('pt-BR')}`;
+    tableDiv.appendChild(lastUpdate);
+    
+    // Criar tabela
+    const table = document.createElement('table');
+    table.innerHTML = `
+        <tbody>
+            <tr>
+                <td>Carga:</td>
+                <td>${formatNumber(data.carga)} MW</td>
+            </tr>
+            <tr>
+                <td>Exportação:</td>
+                <td>${formatNumber(data.exportacao)} MW</td>
+            </tr>
+            <tr>
+                <td>Ger. Eólica:</td>
+                <td>${formatNumber(data.geracaoEolica)} MW</td>
+            </tr>
+            <tr>
+                <td>Ger. Hidráulica:</td>
+                <td>${formatNumber(data.geracaoHidraulica)} MW</td>
+            </tr>
+            <tr>
+                <td>Ger. Térmica:</td>
+                <td>${formatNumber(data.geracaoTermica)} MW</td>
+            </tr>
+            <tr>
+                <td>Ger. Nuclear:</td>
+                <td>${formatNumber(data.geracaoNuclear)} MW</td>
+            </tr>
+            <tr>
+                <td>Ger. Solar:</td>
+                <td>${formatNumber(data.geracaoSolar)} MW</td>
+            </tr>
+            <tr>
+                <td>Importação:</td>
+                <td>${formatNumber(data.importacao)} MW</td>
+            </tr>
+        </tbody>
+    `;
+    
+    tableDiv.appendChild(table);
+    
+    // Adicionar elementos ao container principal
+    mainContainer.appendChild(chartDiv);
+    mainContainer.appendChild(tableDiv);
+    
+    // Adicionar container principal ao início do container de gráficos
+    container.insertBefore(mainContainer, container.firstChild);
+    
+    // Criar gráfico de carga
+    const ctx = canvas.getContext('2d');
+    const cargaChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Carga',
+                data: [],
+                borderColor: '#1a73e8',
+                backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'Curva de Carga (MW)'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            return `Carga: ${formatNumber(context.parsed.y)} MW`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: 'MW'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatNumber(value);
+                        }
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Hora'
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            }
+        }
+    });
+    
+    // Armazenar referência do gráfico
+    charts.set('carga-principal', cargaChart);
+    
+    // Carregar dados de carga
+    fetchONSData(ENDPOINTS_ONS.Carga.SIN).then(data => {
+        if (data) {
+            const processedData = processData(data);
+            cargaChart.data.labels = processedData.labels;
+            cargaChart.data.datasets[0].data = processedData.values;
+            cargaChart.update();
+        }
+    });
+}
+
 // Função para lidar com a mudança de sistema
 async function handleSystemChange(event) {
     const selectedSystem = event.target.value;
@@ -536,61 +691,23 @@ async function handleSystemChange(event) {
         checkbox.checked = false;
     });
     
-    // Buscar balanço energético
-    const balanco = await fetchONSData(ENDPOINTS_ONS.Balanço.Consolidado);
-    if (balanco) {
-        createBalancoTable(balanco, selectedSystem);
+    try {
+        // Buscar balanço energético com a URL correta
+        const response = await axios.get(`${CORS_PROXY}https://integra.ons.org.br/api/energiaagora/GetBalancoEnergeticoConsolidado/null`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        if (response.data) {
+            createBalancoTable(response.data, selectedSystem);
+        }
+    } catch (error) {
+        console.error('Erro ao buscar balanço energético:', error);
     }
     
     // Atualizar visibilidade dos endpoints baseado no sistema selecionado
     updateEndpointVisibility(selectedSystem);
-}
-
-// Função para criar tabela do balanço energético
-function createBalancoTable(data, sistema) {
-    const container = document.querySelector('.charts-container');
-    
-    // Criar div para a tabela
-    const tableDiv = document.createElement('div');
-    tableDiv.className = 'balanco-table';
-    
-    // Criar título
-    const title = document.createElement('h3');
-    title.textContent = `Balanço Energético - ${SISTEMAS[sistema]}`;
-    tableDiv.appendChild(title);
-    
-    // Criar tabela
-    const table = document.createElement('table');
-    table.innerHTML = `
-        <thead>
-            <tr>
-                <th>Tipo</th>
-                <th>Valor (MW)</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${createBalancoRows(data, sistema)}
-        </tbody>
-    `;
-    
-    tableDiv.appendChild(table);
-    container.insertBefore(tableDiv, container.firstChild);
-}
-
-// Função para criar linhas da tabela de balanço
-function createBalancoRows(data, sistema) {
-    // Aqui você vai processar os dados do balanço e retornar as linhas HTML
-    // Este é um exemplo, ajuste conforme a estrutura real dos dados
-    return `
-        <tr>
-            <td>Geração Total</td>
-            <td>${formatNumber(data.geracaoTotal || 0)}</td>
-        </tr>
-        <tr>
-            <td>Carga</td>
-            <td>${formatNumber(data.carga || 0)}</td>
-        </tr>
-    `;
 }
 
 // Função para atualizar visibilidade dos endpoints
