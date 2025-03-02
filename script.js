@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.10";
+const DASHBOARD_VERSION = "1.0.11";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
@@ -17,7 +17,10 @@ const ENDPOINTS_ONS = {
     },
     "Carga": {
         "Carga Total": "Carga_SIN_json",
-        "Carga por Região": "Carga_Regioes_json"
+        "Carga Norte": "Carga_Norte_json",
+        "Carga Nordeste": "Carga_Nordeste_json",
+        "Carga Sudeste/Centro-Oeste": "Carga_SudesteECentroOeste_json",
+        "Carga Sul": "Carga_Sul_json"
     },
     "Intercâmbio": {
         "Entre Regiões": "Intercambio_Regioes_json"
