@@ -1,5 +1,5 @@
 // Versão atual do dashboard
-const DASHBOARD_VERSION = "1.0.9";
+const DASHBOARD_VERSION = "1.0.10";
 
 // Cache para armazenar as respostas da API
 const API_CACHE = new Map();
@@ -16,7 +16,7 @@ const ENDPOINTS_ONS = {
         "Total": "Geracao_SIN_Total_json"
     },
     "Carga": {
-        "Carga Total": "Carga_SIN_Total_json",
+        "Carga Total": "Carga_SIN_json",
         "Carga por Região": "Carga_Regioes_json"
     },
     "Intercâmbio": {
